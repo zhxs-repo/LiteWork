@@ -108,4 +108,17 @@ class StorageKeys {
   // 最近使用
   static const String recentProjects = 'recent_projects';
   static const String recentNotes = 'recent_notes';
+  
+  // 数据列表
+  static const String postsList = 'posts_list';
+  static const String notesList = 'notes_list';
+  static const String videoProjectsList = 'video_projects_list';
+  static const String foldersList = 'folders_list';
+  
+  // Hive Box 名称
+  static const String postsBox = 'posts_box';
+  static const String notesBox = 'notes_box';
+  static const String videoProjectsBox = 'video_projects_box';
+  static const String trashBox = 'trash_box';
+  static const String foldersBox = 'folders_box';
 }
