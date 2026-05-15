@@ -68,7 +68,7 @@ class _MediaThumbnail extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Container(
-              color: Colors.blue[Grey][300 + (index * 50) % 400],
+              color: Colors.blueGrey[300 + (index * 50) % 400],
               child: Icon(
                 index % 3 == 0 ? Icons.video_library : (index % 3 == 1 ? Icons.image : Icons.music_note),
                 size: 40,
