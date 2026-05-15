@@ -24,9 +24,22 @@ class TrashDataSource {
     return _box.entries.toList();
   }
 
-  /// 还原项目
-  Future<void> restore(String id) async {
+  /// 还原项目（从回收站恢复）
+  Future<Map<String, dynamic>?> restore(String id) async {
+    final data = _box.get(id);
+    if (data == null) return null;
+    
+    // 返回数据以便调用者恢复到原始位置
+    final result = {
+      'id': data['id'],
+      'data': data['data'],
+      'type': data['type'],
+    };
+    
+    // 从回收站删除
     await _box.delete(id);
+    
+    return result;
   }
 
   /// 彻底删除
