@@ -1,0 +1,228 @@
+/// 笔记模块 - ViewModel (MVVM)
+
+import 'package:flutter/foundation.dart';
+import '../domain/models.dart';
+
+/// 笔记管理 ViewModel
+class NotesViewModel extends ChangeNotifier {
+  final List<Note> _notes = [];
+  final List<NoteFolder> _folders = [];
+  Note? _currentNote;
+  bool _isLoading = false;
+  String? _error;
+  String? _selectedFolderId;
+  
+  List<Note> get notes => _notes;
+  List<NoteFolder> get folders => _folders;
+  Note? get currentNote => _currentNote;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  String? get selectedFolderId => _selectedFolderId;
+  
+  /// 获取过滤后的笔记列表
+  List<Note> get filteredNotes {
+    if (_selectedFolderId == null) return _notes;
+    return _notes.where((n) => n.folderId == _selectedFolderId).toList();
+  }
+  
+  /// 加载笔记列表
+  Future<void> loadNotes() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
+    try {
+      // TODO: 从数据层加载数据
+      await Future.delayed(const Duration(milliseconds: 500));
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+  
+  /// 加载文件夹列表
+  Future<void> loadFolders() async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      // TODO: 从数据层加载数据
+      await Future.delayed(const Duration(milliseconds: 300));
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+  
+  /// 创建新笔记
+  Future<void> createNote({
+    required String title,
+    String content = '',
+    NoteType type = NoteType.richText,
+    String? folderId,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      final note = Note(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        content: content,
+        type: type,
+        folderId: folderId,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      
+      // TODO: 保存到数据层
+      _notes.insert(0, note);
+      _currentNote = note;
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+  
+  /// 打开笔记
+  void openNote(String noteId) {
+    _currentNote = _notes.firstWhere(
+      (n) => n.id == noteId,
+      orElse: () => throw Exception('Note not found'),
+    );
+    notifyListeners();
+  }
+  
+  /// 更新笔记
+  Future<void> updateNote(Note note) async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      final index = _notes.indexWhere((n) => n.id == note.id);
+      if (index != -1) {
+        final updatedNote = note.copyWith(
+          updatedAt: DateTime.now(),
+        );
+        _notes[index] = updatedNote;
+        _currentNote = updatedNote;
+      }
+      // TODO: 保存到数据层
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+  
+  /// 删除笔记
+  Future<void> deleteNote(String id) async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      // TODO: 从数据层删除
+      _notes.removeWhere((n) => n.id == id);
+      if (_currentNote?.id == id) {
+        _currentNote = null;
+      }
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+  
+  /// 切换收藏状态
+  void toggleFavorite(String noteId) {
+    final index = _notes.indexWhere((n) => n.id == noteId);
+    if (index != -1) {
+      _notes[index] = _notes[index].copyWith(
+        isFavorite: !_notes[index].isFavorite,
+      );
+      if (_currentNote?.id == noteId) {
+        _currentNote = _notes[index];
+      }
+      notifyListeners();
+    }
+  }
+  
+  /// 选择文件夹
+  void selectFolder(String? folderId) {
+    _selectedFolderId = folderId;
+    notifyListeners();
+  }
+  
+  /// 创建文件夹
+  Future<void> createFolder(String name, {String? parentId}) async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      final folder = NoteFolder(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: name,
+        parentId: parentId,
+        createdAt: DateTime.now(),
+      );
+      
+      // TODO: 保存到数据层
+      _folders.add(folder);
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+  
+  /// 移动笔记到文件夹
+  void moveNoteToFolder(String noteId, String? folderId) {
+    final index = _notes.indexWhere((n) => n.id == noteId);
+    if (index != -1) {
+      _notes[index] = _notes[index].copyWith(folderId: folderId);
+      notifyListeners();
+    }
+  }
+  
+  /// 同步笔记
+  Future<void> syncNote(String noteId) async {
+    final index = _notes.indexWhere((n) => n.id == noteId);
+    if (index != -1) {
+      _isLoading = true;
+      notifyListeners();
+      
+      try {
+        // TODO: 实现同步逻辑
+        await Future.delayed(const Duration(seconds: 1));
+        _notes[index] = _notes[index].copyWith(isSynced: true);
+        _isLoading = false;
+        notifyListeners();
+      } catch (e) {
+        _isLoading = false;
+        _error = e.toString();
+        notifyListeners();
+      }
+    }
+  }
+  
+  /// 清空错误
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+}
