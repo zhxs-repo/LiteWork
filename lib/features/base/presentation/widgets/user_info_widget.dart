@@ -21,6 +21,12 @@ class UserInfoWidget extends StatelessWidget {
         final user = userProvider.currentUser;
         final isGuest = userProvider.isGuest;
 
+        // 安全获取用户名首字符，避免空字符串崩溃
+        String getInitials(String? username) {
+          if (username == null || username.isEmpty) return '用';
+          return username.substring(0, 1);
+        }
+
         return Card(
           margin: const EdgeInsets.all(16),
           child: InkWell(
@@ -35,7 +41,7 @@ class UserInfoWidget extends StatelessWidget {
                     radius: 30,
                     backgroundColor: AppTheme.primaryColor,
                     child: Text(
-                      user?.username.substring(0, 1) ?? '用',
+                      getInitials(user?.username),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
