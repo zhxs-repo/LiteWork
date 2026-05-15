@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/base/presentation/screens/profile_screen.dart';
+
 /// 路由路径常量
 class AppRoutes {
   static const String home = '/';
@@ -13,6 +15,7 @@ class AppRoutes {
   static const String notesCreate = '/notes/create';
   static const String notesEdit = '/notes/edit';
   static const String noteDetail = '/notes/:id';
+  static const String profile = '/profile';
 }
 
 /// 路由配置
@@ -29,6 +32,15 @@ class AppRouter {
             path: AppRoutes.home,
             name: 'home',
             builder: (context, state) => const HomePage(),
+          ),
+          
+          // 个人中心
+          GoRoute(
+            path: AppRoutes.profile,
+            name: 'profile',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: ProfilePage(),
+            ),
           ),
           
           // 图文发布模块
@@ -185,8 +197,8 @@ class HomePage extends StatelessWidget {
         title: const Text('LiteWork'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {},
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => context.push(AppRoutes.profile),
           ),
         ],
       ),
