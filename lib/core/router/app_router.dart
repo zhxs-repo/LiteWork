@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/base/presentation/screens/profile_screen.dart';
+import '../../features/publisher/presentation/screens/post_list_screen.dart';
+import '../../features/publisher/presentation/screens/post_editor_screen.dart';
 
 /// 路由路径常量
 class AppRoutes {
   static const String home = '/';
   static const String publisher = '/publisher';
-  static const String publisherCreate = '/publisher/create';
-  static const String publisherEdit = '/publisher/edit';
+  static const String publisherDrafts = '/publisher/drafts';
+  static const String postEditor = '/post/editor';
   static const String videoEditor = '/video-editor';
   static const String videoEditorCreate = '/video-editor/create';
   static const String notes = '/notes';
@@ -47,17 +49,17 @@ class AppRouter {
           GoRoute(
             path: AppRoutes.publisher,
             name: 'publisher',
-            builder: (context, state) => const PublisherPage(),
+            builder: (context, state) => const PostListScreen(),
             routes: [
               GoRoute(
-                path: 'create',
-                name: 'publisherCreate',
-                builder: (context, state) => const PublisherCreatePage(),
-              ),
-              GoRoute(
-                path: 'edit',
-                name: 'publisherEdit',
-                builder: (context, state) => const PublisherEditPage(),
+                path: AppRoutes.postEditor,
+                name: 'postEditor',
+                pageBuilder: (context, state) {
+                  final postId = state.uri.queryParameters['id'];
+                  return MaterialPage(
+                    child: PostEditorScreen(postId: postId),
+                  );
+                },
               ),
             ],
           ),
