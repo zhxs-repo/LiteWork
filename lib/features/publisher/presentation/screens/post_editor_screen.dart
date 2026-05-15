@@ -18,6 +18,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   late quill.QuillController _controller;
   late quill.QuillToolbarConfig _toolbarConfig;
   bool _isInitialized = false;
+  TextEditingController? _titleController;
 
   @override
   void initState() {
@@ -28,7 +29,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
 
   Future<void> _initEditor() async {
     final provider = context.read<PostProvider>();
-    
+
     if (widget.postId != null) {
       await provider.loadPost(widget.postId!);
       final post = provider.currentPost;
@@ -38,12 +39,14 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
             document: quill.Document.fromDelta(post.content),
             selection: const TextSelection.collapsed(offset: 0),
           );
+          _titleController = TextEditingController(text: post.title);
           _isInitialized = true;
         });
       }
     } else {
       provider.createPost();
       setState(() {
+        _titleController = TextEditingController(text: '新草稿');
         _isInitialized = true;
       });
     }
@@ -52,6 +55,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _titleController?.dispose();
     super.dispose();
   }
 
@@ -74,7 +78,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
-                controller: TextEditingController(text: provider.currentPost?.title ?? ''),
+                controller: _titleController ?? TextEditingController(),
                 onChanged: (value) {
                   provider.updateTitle(value);
                 },
@@ -272,7 +276,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
             // 监听内容变化自动保存（简单实现：3 秒防抖）
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: AppTheme.light.surfaceColor,
+              color: AppTheme.surfaceColor,
               child: Row(
                 children: [
                   const Icon(Icons.info_outline, size: 16, color: Colors.grey),
