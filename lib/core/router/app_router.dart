@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../features/base/presentation/screens/profile_screen.dart';
 import '../../features/publisher/presentation/screens/post_list_screen.dart';
 import '../../features/publisher/presentation/screens/post_editor_screen.dart';
+import '../../features/notes/presentation/screens/trash_screen.dart';
+import '../search/search_screen.dart';
+import '../../features/video_editor/presentation/screens/video_list_screen.dart';
 
 /// 路由路径常量
 class AppRoutes {
@@ -18,6 +21,8 @@ class AppRoutes {
   static const String notesEdit = '/notes/edit';
   static const String noteDetail = '/notes/:id';
   static const String profile = '/profile';
+  static const String search = '/search';
+  static const String trash = '/trash';
 }
 
 /// 路由配置
@@ -64,11 +69,11 @@ class AppRouter {
             ],
           ),
           
-          // 视频剪辑模块
+          // 视频剪辑模块 - 使用新创建的 VideoListScreen
           GoRoute(
             path: AppRoutes.videoEditor,
             name: 'videoEditor',
-            builder: (context, state) => const VideoEditorPage(),
+            builder: (context, state) => const VideoListScreen(),
             routes: [
               GoRoute(
                 path: 'create',
@@ -103,6 +108,20 @@ class AppRouter {
                 },
               ),
             ],
+          ),
+          
+          // 全局搜索
+          GoRoute(
+            path: AppRoutes.search,
+            name: 'search',
+            pageBuilder: (context, state) => const MaterialPage(child: SearchScreen()),
+          ),
+          
+          // 回收站
+          GoRoute(
+            path: AppRoutes.trash,
+            name: 'trash',
+            pageBuilder: (context, state) => const MaterialPage(child: TrashScreen()),
           ),
         ],
       ),
