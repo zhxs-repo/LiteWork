@@ -25,11 +25,27 @@ class AppRoutes {
   static const String trash = '/trash';
 }
 
+/// 简单的认证检查 (实际项目中应从 UserProvider 获取真实状态)
+bool _isLoggedIn() {
+  // TODO: 从真实的 UserProvider 获取登录状态
+  return true; // 当前默认允许访问，因为支持免登录
+}
+
 /// 路由配置
 class AppRouter {
   static final GoRouter router = GoRouter(
     initialLocation: AppRoutes.home,
     debugLogDiagnostics: true,
+    redirect: (context, state) {
+      // 路由守卫：需要登录的页面
+      final isLoginRequired = state.matchedLocation == AppRoutes.profile;
+      
+      if (isLoginRequired && !_isLoggedIn()) {
+        return AppRoutes.home; // 未登录重定向到首页
+      }
+      
+      return null; // 允许访问
+    },
     routes: [
       // 主页
       ShellRoute(
