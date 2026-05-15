@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'search_engine.dart';
+import 'search_result_model.dart';
 
 /// 全局搜索页面
 class SearchScreen extends StatefulWidget {
@@ -10,9 +12,52 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
+  final SearchEngine _searchEngine = SearchEngine();
   String _filterType = 'all';
-  List<dynamic> _results = [];
+  List<SearchResult> _results = [];
   bool _isSearching = false;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeSearchEngine();
+  }
+
+  /// 初始化搜索引擎并添加测试数据
+  Future<void> _initializeSearchEngine() async {
+    // 添加一些测试数据
+    _searchEngine.addDocument(SearchResult(
+      id: '1',
+      title: '我的第一篇笔记',
+      contentSnippet: '这是关于 Flutter 学习的心得体会...',
+      type: 'note',
+      createdAt: DateTime.now().subtract(const Duration(days: 2)),
+      updatedAt: DateTime.now(),
+    ));
+    
+    _searchEngine.addDocument(SearchResult(
+      id: '2',
+      title: '图文发布教程',
+      contentSnippet: '如何使用 LiteWork 发布精美的图文内容...',
+      type: 'post',
+      createdAt: DateTime.now().subtract(const Duration(days: 5)),
+      updatedAt: DateTime.now(),
+    ));
+    
+    _searchEngine.addDocument(SearchResult(
+      id: '3',
+      title: '旅行视频项目',
+      contentSnippet: '视频项目 - 3 个片段',
+      type: 'video_project',
+      createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      updatedAt: DateTime.now(),
+    ));
+
+    setState(() {
+      _isInitialized = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,16 +154,22 @@ class _SearchScreenState extends State<SearchScreen> {
     return ListView.builder(
       itemCount: _results.length,
       itemBuilder: (context, index) {
-        // TODO: 渲染实际搜索结果
+        final result = _results[index];
         return ListTile(
-          leading: const Icon(Icons.article),
-          title: Text('示例结果 $index'),
-          subtitle: const Text('这是搜索结果的摘要内容...'),
+          leading: _getTypeIcon(result.type),
+          title: Text(result.title),
+          subtitle: Text(result.contentSnippet),
           trailing: Chip(
-            label: const Text('笔记', style: TextStyle(fontSize: 12, color: Colors.white)),
-            backgroundColor: Colors.blue,
+            label: Text(_getTypeLabel(result.type), style: const TextStyle(fontSize: 12, color: Colors.white)),
+            backgroundColor: _getTypeColor(result.type),
             padding: EdgeInsets.zero,
           ),
+          onTap: () {
+            // TODO: 跳转到对应详情页
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('点击了：${result.title}')),
+            );
+          },
         );
       },
     );
@@ -129,14 +180,56 @@ class _SearchScreenState extends State<SearchScreen> {
       _isSearching = true;
     });
 
-    // 模拟搜索延迟
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(const Duration(milliseconds: 100), () {
       setState(() {
         _isSearching = false;
-        // TODO: 调用搜索引擎
-        _results = query.isNotEmpty ? List.generate(5, (i) => i) : [];
+        if (query.isEmpty) {
+          _results = [];
+        } else {
+          String? typeFilter = _filterType == 'all' ? null : _filterType;
+          _results = _searchEngine.search(query, typeFilter: typeFilter);
+        }
       });
     });
+  }
+
+  Widget _getTypeIcon(String type) {
+    switch (type) {
+      case 'note':
+        return const Icon(Icons.note, color: Colors.green);
+      case 'post':
+        return const Icon(Icons.article, color: Colors.blue);
+      case 'video_project':
+        return const Icon(Icons.video_library, color: Colors.orange);
+      default:
+        return const Icon(Icons.description);
+    }
+  }
+
+  String _getTypeLabel(String type) {
+    switch (type) {
+      case 'note':
+        return '笔记';
+      case 'post':
+        return '图文';
+      case 'video_project':
+        return '视频';
+      default:
+        return '其他';
+    }
+  }
+
+  Color _getTypeColor(String type) {
+    switch (type) {
+      case 'note':
+        return Colors.green;
+      case 'post':
+        return Colors.blue;
+      case 'video_project':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
   }
 
   @override

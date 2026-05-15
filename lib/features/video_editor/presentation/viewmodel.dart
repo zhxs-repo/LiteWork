@@ -2,20 +2,45 @@
 
 import 'package:flutter/foundation.dart';
 import '../domain/models.dart';
+import '../../data/datasources/video_local_datasource.dart';
+import '../../data/models/video_project_model.dart' as data_models;
 
 /// 视频编辑 ViewModel
 class VideoEditorViewModel extends ChangeNotifier {
+  final VideoLocalDataSource _dataSource = VideoLocalDataSource();
   final List<VideoProject> _projects = [];
   VideoProject? _currentProject;
   bool _isLoading = false;
   String? _error;
   double _renderProgress = 0.0;
+  bool _isInitialized = false;
   
   List<VideoProject> get projects => _projects;
   VideoProject? get currentProject => _currentProject;
   bool get isLoading => _isLoading;
   String? get error => _error;
   double get renderProgress => _renderProgress;
+  bool get isInitialized => _isInitialized;
+  
+  /// 初始化数据源并加载数据
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+    
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      await _dataSource.init();
+      await loadProjects();
+      _isInitialized = true;
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = '初始化失败：${e.toString()}';
+      notifyListeners();
+    }
+  }
   
   /// 加载项目列表
   Future<void> loadProjects() async {
@@ -24,8 +49,9 @@ class VideoEditorViewModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      // TODO: 从数据层加载数据
-      await Future.delayed(const Duration(milliseconds: 500));
+      final loadedProjects = await _dataSource.getAllProjects();
+      _projects.clear();
+      _projects.addAll(loadedProjects.map((p) => _mapToDomainProject(p)));
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -41,17 +67,20 @@ class VideoEditorViewModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      final project = VideoProject(
+      final projectData = data_models.VideoProject(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: title,
-        template: template,
+        mediaPaths: [],
+        duration: null,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        thumbnailPath: null,
       );
       
-      // TODO: 保存到数据层
-      _projects.insert(0, project);
-      _currentProject = project;
+      await _dataSource.saveProject(projectData);
+      final domainProject = _mapToDomainProject(projectData);
+      _projects.insert(0, domainProject);
+      _currentProject = domainProject;
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -68,6 +97,19 @@ class VideoEditorViewModel extends ChangeNotifier {
       orElse: () => throw Exception('Project not found'),
     );
     notifyListeners();
+  }
+  
+  /// 保存当前项目
+  Future<void> saveCurrentProject() async {
+    if (_currentProject == null) return;
+    
+    try {
+      final projectData = _mapToDataProject(_currentProject!);
+      await _dataSource.saveProject(projectData);
+    } catch (e) {
+      _error = '保存失败：${e.toString()}';
+      notifyListeners();
+    }
   }
   
   /// 添加视频片段
@@ -141,7 +183,7 @@ class VideoEditorViewModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      // TODO: 从数据层删除
+      await _dataSource.deleteProject(id);
       _projects.removeWhere((p) => p.id == id);
       if (_currentProject?.id == id) {
         _currentProject = null;
@@ -159,6 +201,37 @@ class VideoEditorViewModel extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+  
+  // ==================== 数据转换 ====================
+  
+  VideoProject _mapToDomainProject(data_models.VideoProject data) {
+    return VideoProject(
+      id: data.id,
+      title: data.title,
+      clips: [], // 简化处理，实际需要从 clipsBox 加载
+      status: ProjectStatus.draft,
+      resolution: '1080p',
+      fps: 30,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+      thumbnailPath: data.thumbnailPath,
+    );
+  }
+  
+  data_models.VideoProject _mapToDataProject(VideoProject domain) {
+    return data_models.VideoProject(
+      id: domain.id,
+      title: domain.title,
+      mediaPaths: domain.clips.map((c) => c.sourcePath).toList(),
+      duration: domain.clips.fold<Duration>(
+        Duration.zero,
+        (total, clip) => total + clip.duration,
+      ),
+      createdAt: domain.createdAt,
+      updatedAt: DateTime.now(),
+      thumbnailPath: domain.thumbnailPath,
+    );
   }
 }
 

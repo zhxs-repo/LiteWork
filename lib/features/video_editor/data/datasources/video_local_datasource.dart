@@ -1,62 +1,84 @@
-import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../models/video_project_model.dart';
 import '../models/media_item_model.dart';
 import '../models/timeline_clip_model.dart';
 
+/// 视频本地数据源 - 使用 Map 存储以避免 Hive 类型注册问题
 class VideoLocalDataSource {
-  static const String _projectBoxName = 'video_projects';
-  static const String _mediaBoxName = 'media_items';
-  static const String _clipsBoxName = 'timeline_clips';
+  static const String projectBoxName = 'video_projects';
+  static const String mediaBoxName = 'media_items';
+  static const String clipsBoxName = 'timeline_clips';
+  
+  late Box<Map> _projectBox;
+  late Box<Map> _mediaBox;
+  late Box<Map> _clipsBox;
 
-  late Box<VideoProject> _projectBox;
-  late Box<MediaItem> _mediaBox;
-  late Box<TimelineClip> _clipsBox;
-
+  /// 初始化数据源
   Future<void> init() async {
-    _projectBox = await Hive.openBox<VideoProject>(_projectBoxName);
-    _mediaBox = await Hive.openBox<MediaItem>(_mediaBoxName);
-    _clipsBox = await Hive.openBox<TimelineClip>(_clipsBoxName);
+    _projectBox = await Hive.openBox<Map>(projectBoxName);
+    _mediaBox = await Hive.openBox<Map>(mediaBoxName);
+    _clipsBox = await Hive.openBox<Map>(clipsBoxName);
   }
 
-  // Project CRUD
+  // ==================== Project CRUD ====================
+  
   Future<List<VideoProject>> getAllProjects() async {
-    return _projectBox.values.toList();
+    return _projectBox.values.map((data) => _mapToProject(data)).toList();
   }
 
   Future<VideoProject?> getProjectById(String id) async {
-    return _projectBox.get(id);
+    final data = _projectBox.get(id);
+    if (data == null) return null;
+    return _mapToProject(data);
   }
 
   Future<void> saveProject(VideoProject project) async {
-    await _projectBox.put(project.id, project);
+    await _projectBox.put(project.id, _projectToMap(project));
   }
 
   Future<void> deleteProject(String id) async {
     await _projectBox.delete(id);
   }
 
-  // Media CRUD
+  // ==================== Media CRUD ====================
+  
   Future<List<MediaItem>> getAllMedia() async {
-    return _mediaBox.values.toList();
+    return _mediaBox.values.map((data) => _mapToMedia(data)).toList();
+  }
+
+  Future<MediaItem?> getMediaById(String id) async {
+    final data = _mediaBox.get(id);
+    if (data == null) return null;
+    return _mapToMedia(data);
   }
 
   Future<void> saveMedia(MediaItem media) async {
-    await _mediaBox.put(media.id, media);
+    await _mediaBox.put(media.id, _mediaToMap(media));
   }
 
   Future<void> saveMediaBatch(List<MediaItem> mediaList) async {
-    for (var media in mediaList) {
-      await _mediaBox.put(media.id, media);
+    final batch = <String, Map<String, dynamic>>{};
+    for (final media in mediaList) {
+      batch[media.id] = _mediaToMap(media);
     }
+    await _mediaBox.putAll(batch);
   }
 
-  // Clips CRUD
+  Future<void> deleteMedia(String id) async {
+    await _mediaBox.delete(id);
+  }
+
+  // ==================== Clips CRUD ====================
+  
   Future<List<TimelineClip>> getClipsForProject(String projectId) async {
-    return _clipsBox.values.where((clip) => clip.id.startsWith(projectId)).toList();
+    return _clipsBox.values
+        .where((data) => _mapToClip(data).projectId == projectId)
+        .map((data) => _mapToClip(data))
+        .toList();
   }
 
   Future<void> saveClip(TimelineClip clip) async {
-    await _clipsBox.put(clip.id, clip);
+    await _clipsBox.put(clip.id, _clipToMap(clip));
   }
 
   Future<void> deleteClip(String clipId) async {
@@ -67,5 +89,81 @@ class VideoLocalDataSource {
     await _projectBox.clear();
     await _mediaBox.clear();
     await _clipsBox.clear();
+  }
+
+  // ==================== Data Conversion ====================
+  
+  Map<String, dynamic> _projectToMap(VideoProject project) {
+    return {
+      'id': project.id,
+      'title': project.title,
+      'mediaPaths': project.mediaPaths,
+      'duration': project.duration?.inSeconds,
+      'createdAt': project.createdAt.toIso8601String(),
+      'updatedAt': project.updatedAt.toIso8601String(),
+      'thumbnailPath': project.thumbnailPath,
+    };
+  }
+
+  VideoProject _mapToProject(Map data) {
+    return VideoProject(
+      id: data['id'] as String,
+      title: data['title'] as String,
+      mediaPaths: List<String>.from(data['mediaPaths'] ?? []),
+      duration: data['duration'] != null
+          ? Duration(seconds: data['duration'] as int)
+          : null,
+      createdAt: DateTime.parse(data['createdAt'] as String),
+      updatedAt: DateTime.parse(data['updatedAt'] as String),
+      thumbnailPath: data['thumbnailPath'] as String?,
+    );
+  }
+
+  Map<String, dynamic> _mediaToMap(MediaItem media) {
+    return {
+      'id': media.id,
+      'path': media.path,
+      'type': media.type.index,
+      'duration': media.duration?.inSeconds,
+      'thumbnailPath': media.thumbnailPath,
+      'createdAt': media.createdAt.toIso8601String(),
+    };
+  }
+
+  MediaItem _mapToMedia(Map data) {
+    return MediaItem(
+      id: data['id'] as String,
+      path: data['path'] as String,
+      type: MediaType.values[data['type'] as int],
+      duration: data['duration'] != null
+          ? Duration(seconds: data['duration'] as int)
+          : null,
+      thumbnailPath: data['thumbnailPath'] as String?,
+      createdAt: DateTime.parse(data['createdAt'] as String),
+    );
+  }
+
+  Map<String, dynamic> _clipToMap(TimelineClip clip) {
+    return {
+      'id': clip.id,
+      'projectId': clip.projectId,
+      'mediaId': clip.mediaId,
+      'startTime': clip.startTime.inMilliseconds,
+      'endTime': clip.endTime.inMilliseconds,
+      'trackIndex': clip.trackIndex,
+      'position': clip.position.inMilliseconds,
+    };
+  }
+
+  TimelineClip _mapToClip(Map data) {
+    return TimelineClip(
+      id: data['id'] as String,
+      projectId: data['projectId'] as String,
+      mediaId: data['mediaId'] as String,
+      startTime: Duration(milliseconds: data['startTime'] as int),
+      endTime: Duration(milliseconds: data['endTime'] as int),
+      trackIndex: data['trackIndex'] as int,
+      position: Duration(milliseconds: data['position'] as int),
+    );
   }
 }
