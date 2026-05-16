@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
@@ -17,6 +18,18 @@ import 'features/publisher/presentation/providers/post_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 初始化 Hive
+  await Hive.initFlutter();
+  
+  // 打开需要的 Box
+  await Future.wait([
+    Hive.openBox('posts_box'),
+    Hive.openBox('notes_box'),
+    Hive.openBox('video_projects_box'),
+    Hive.openBox('trash_box'),
+    Hive.openBox('folders_box'),
+  ]);
   
   // 初始化本地存储
   await StorageManager().init();

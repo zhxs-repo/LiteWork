@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'search_engine.dart';
+import 'package:provider/provider.dart';
+import '../../../core/storage/storage_manager.dart';
+import '../../../features/notes/domain/models.dart';
+import '../../../features/video_editor/domain/models.dart' as video;
 import 'search_result_model.dart';
 
-/// 全局搜索页面
+/// 全局搜索页面 - 接入真实数据源
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -12,7 +15,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
-  final SearchEngine _searchEngine = SearchEngine();
+  final StorageManager _storageManager = StorageManager();
   String _filterType = 'all';
   List<SearchResult> _results = [];
   bool _isSearching = false;
@@ -24,39 +27,66 @@ class _SearchScreenState extends State<SearchScreen> {
     _initializeSearchEngine();
   }
 
-  /// 初始化搜索引擎并添加测试数据
+  /// 从真实数据源加载搜索结果
   Future<void> _initializeSearchEngine() async {
-    // 添加一些测试数据
-    _searchEngine.addDocument(SearchResult(
-      id: '1',
-      title: '我的第一篇笔记',
-      contentSnippet: '这是关于 Flutter 学习的心得体会...',
-      type: 'note',
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      updatedAt: DateTime.now(),
-    ));
-    
-    _searchEngine.addDocument(SearchResult(
-      id: '2',
-      title: '图文发布教程',
-      contentSnippet: '如何使用 LiteWork 发布精美的图文内容...',
-      type: 'post',
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      updatedAt: DateTime.now(),
-    ));
-    
-    _searchEngine.addDocument(SearchResult(
-      id: '3',
-      title: '旅行视频项目',
-      contentSnippet: '视频项目 - 3 个片段',
-      type: 'video_project',
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      updatedAt: DateTime.now(),
-    ));
-
     setState(() {
       _isInitialized = true;
     });
+  }
+
+  /// 从存储中搜索笔记
+  List<SearchResult> _searchNotes(String query) {
+    final results = <SearchResult>[];
+    final keys = _storageManager.getKeys();
+    
+    for (final key in keys) {
+      if (key.startsWith('note_')) {
+        final jsonStr = _storageManager.getString(key);
+        if (jsonStr != null) {
+          try {
+            final note = NoteModel.fromJson(jsonStr);
+            if (note.title.contains(query) || note.content.contains(query)) {
+              results.add(SearchResult(
+                id: note.id,
+                title: note.title,
+                contentSnippet: note.content.substring(0, note.content.length.clamp(0, 50)),
+                type: 'note',
+                createdAt: note.createdAt,
+                updatedAt: note.updatedAt,
+              ));
+            }
+          } catch (e) {
+            // 忽略解析错误
+          }
+        }
+      }
+    }
+    return results;
+  }
+
+  /// 从存储中搜索视频项目
+  List<SearchResult> _searchVideoProjects(String query) {
+    final results = <SearchResult>[];
+    final projectsList = _storageManager.get<List>('video_projects_list', defaultValue: []);
+    
+    if (projectsList is List) {
+      for (final item in projectsList) {
+        if (item is Map<String, dynamic>) {
+          final title = item['title'] as String? ?? '';
+          if (title.contains(query)) {
+            results.add(SearchResult(
+              id: item['id'] as String? ?? '',
+              title: title,
+              contentSnippet: '${item['clipCount'] ?? 0} 个片段',
+              type: 'video_project',
+              createdAt: DateTime.tryParse(item['createdAt'] as String? ?? '') ?? DateTime.now(),
+              updatedAt: DateTime.tryParse(item['updatedAt'] as String? ?? '') ?? DateTime.now(),
+            ));
+          }
+        }
+      }
+    }
+    return results;
   }
 
   @override
@@ -186,8 +216,16 @@ class _SearchScreenState extends State<SearchScreen> {
         if (query.isEmpty) {
           _results = [];
         } else {
-          String? typeFilter = _filterType == 'all' ? null : _filterType;
-          _results = _searchEngine.search(query, typeFilter: typeFilter);
+          _results = [];
+          
+          // 根据过滤类型搜索不同数据源
+          if (_filterType == 'all' || _filterType == 'note') {
+            _results.addAll(_searchNotes(query));
+          }
+          if (_filterType == 'all' || _filterType == 'video') {
+            _results.addAll(_searchVideoProjects(query));
+          }
+          // TODO: 添加图文发布搜索
         }
       });
     });

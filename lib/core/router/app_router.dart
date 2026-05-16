@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../features/base/presentation/screens/profile_screen.dart';
 import '../../features/publisher/presentation/screens/post_list_screen.dart';
 import '../../features/publisher/presentation/screens/post_editor_screen.dart';
 import '../../features/notes/presentation/screens/trash_screen.dart';
+import '../../features/notes/presentation/screens/notes_list_screen.dart';
+import '../../features/notes/presentation/screens/note_editor_screen.dart';
+import '../../features/notes/presentation/viewmodel.dart';
+import '../../features/notes/domain/models.dart';
 import '../search/search_screen.dart';
 import '../../features/video_editor/presentation/screens/video_list_screen.dart';
 
@@ -99,28 +104,34 @@ class AppRouter {
             ],
           ),
           
-          // 笔记模块
+          // 笔记模块 - 使用新创建的 NotesListScreen
           GoRoute(
             path: AppRoutes.notes,
             name: 'notes',
-            builder: (context, state) => const NotesPage(),
+            builder: (context, state) => const NotesListScreen(),
             routes: [
               GoRoute(
                 path: 'create',
                 name: 'notesCreate',
-                builder: (context, state) => const NotesCreatePage(),
-              ),
-              GoRoute(
-                path: 'edit',
-                name: 'notesEdit',
-                builder: (context, state) => const NotesEditPage(),
+                builder: (context, state) {
+                  final typeParam = state.uri.queryParameters['type'];
+                  NoteType? createType;
+                  if (typeParam == 'mindmap') {
+                    createType = NoteType.mindMap;
+                  } else if (typeParam == 'mixed') {
+                    createType = NoteType.mixed;
+                  } else {
+                    createType = NoteType.richText;
+                  }
+                  return NoteEditorScreen(createType: createType);
+                },
               ),
               GoRoute(
                 path: ':id',
                 name: 'noteDetail',
                 builder: (context, state) {
                   final id = state.pathParameters['id'] ?? '';
-                  return NoteDetailPage(noteId: id);
+                  return NoteEditorScreen(noteId: id);
                 },
               ),
             ],
@@ -349,69 +360,15 @@ class VideoEditorCreatePage extends StatelessWidget {
   }
 }
 
-/// 笔记页面
+/// 笔记管理页面（主容器）- 带 Provider
 class NotesPage extends StatelessWidget {
   const NotesPage({super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('笔记管理'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => context.push('${AppRoutes.notes}/create'),
-          ),
-        ],
-      ),
-      body: const Center(
-        child: Text('笔记列表'),
-      ),
-    );
-  }
-}
 
-class NotesCreatePage extends StatelessWidget {
-  const NotesCreatePage({super.key});
-  
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('新建笔记')),
-      body: const Center(
-        child: Text('创建新笔记'),
-      ),
-    );
-  }
-}
-
-class NotesEditPage extends StatelessWidget {
-  const NotesEditPage({super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('编辑笔记')),
-      body: const Center(
-        child: Text('编辑笔记内容'),
-      ),
-    );
-  }
-}
-
-class NoteDetailPage extends StatelessWidget {
-  final String noteId;
-  
-  const NoteDetailPage({super.key, required this.noteId});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('笔记详情')),
-      body: Center(
-        child: Text('笔记详情：$noteId'),
-      ),
+    return ChangeNotifierProvider<NotesViewModel>(
+      create: (_) => NotesViewModel(),
+      child: const NotesListScreen(),
     );
   }
 }

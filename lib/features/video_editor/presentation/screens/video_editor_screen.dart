@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/video_editor_provider.dart';
-import '../../../base/presentation/widgets/loading_indicator.dart';
+import '../../../../core/components/common_components.dart';
 import 'widgets/media_picker_panel.dart';
 import 'widgets/timeline_view.dart';
 import 'widgets/preview_player.dart';

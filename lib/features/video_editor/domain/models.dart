@@ -9,6 +9,7 @@ class VideoProject {
   final VideoTemplate? template;
   final ProjectStatus status;
   final Duration totalDuration;
+  final String? thumbnailPath;
   final DateTime createdAt;
   final DateTime updatedAt;
   
@@ -20,6 +21,7 @@ class VideoProject {
     this.template,
     this.status = ProjectStatus.draft,
     this.totalDuration = Duration.zero,
+    this.thumbnailPath,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -32,6 +34,7 @@ class VideoProject {
     VideoTemplate? template,
     ProjectStatus? status,
     Duration? totalDuration,
+    String? thumbnailPath,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -43,6 +46,7 @@ class VideoProject {
       template: template ?? this.template,
       status: status ?? this.status,
       totalDuration: totalDuration ?? this.totalDuration,
+      thumbnailPath: thumbnailPath ?? this.thumbnailPath,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

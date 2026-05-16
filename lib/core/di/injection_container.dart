@@ -10,7 +10,7 @@ import '../../features/base/presentation/providers/user_provider.dart';
 import '../../features/notes/data/datasources/note_local_datasource.dart';
 import '../../features/notes/domain/repositories/note_repository.dart';
 import '../../features/notes/data/repositories/note_repository_impl.dart';
-import '../../features/notes/presentation/providers/note_provider.dart';
+import '../../features/notes/presentation/viewmodel.dart';
 
 import '../../features/video_editor/data/datasources/video_local_datasource.dart';
 import '../../features/video_editor/domain/repositories/video_repository.dart';
@@ -45,7 +45,7 @@ Future<void> initDependencies() async {
     () => NoteLocalDataSourceImpl(sl()),
   );
   sl.registerLazySingleton<NoteRepository>(() => NoteRepositoryImpl(sl()));
-  sl.registerFactory(() => NoteProvider(sl(), sl()));
+  sl.registerFactory(() => NotesViewModel());
 
   // Video Editor
   sl.registerLazySingleton<VideoLocalDataSource>(

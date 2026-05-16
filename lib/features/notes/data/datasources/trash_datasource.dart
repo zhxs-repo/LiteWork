@@ -24,7 +24,7 @@ class TrashDataSource {
     return _box.entries.toList();
   }
 
-  /// 还原项目（从回收站恢复）
+  /// 还原项目（从回收站恢复）- 与 delete 逻辑区分
   Future<Map<String, dynamic>?> restore(String id) async {
     final data = _box.get(id);
     if (data == null) return null;
@@ -34,6 +34,7 @@ class TrashDataSource {
       'id': data['id'],
       'data': data['data'],
       'type': data['type'],
+      'originalPath': data['originalPath'], // 保存原始路径信息
     };
     
     // 从回收站删除
@@ -42,8 +43,9 @@ class TrashDataSource {
     return result;
   }
 
-  /// 彻底删除
+  /// 彻底删除 - 与 restore 逻辑明确区分
   Future<void> deletePermanently(String id) async {
+    // 直接删除，不保留任何数据
     await _box.delete(id);
   }
 
