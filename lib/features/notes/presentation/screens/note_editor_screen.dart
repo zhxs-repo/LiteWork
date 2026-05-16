@@ -1,0 +1,328 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:provider/provider.dart';
+import '../viewmodel.dart';
+import '../../domain/models.dart';
+import 'mind_map_editor_screen.dart';
+
+/// 笔记编辑页面 - 支持富文本和思维导图
+class NoteEditorScreen extends StatefulWidget {
+  final String? noteId;
+  final NoteType? createType;
+
+  const NoteEditorScreen({
+    super.key,
+    this.noteId,
+    this.createType,
+  });
+
+  @override
+  State<NoteEditorScreen> createState() => _NoteEditorScreenState();
+}
+
+class _NoteEditorScreenState extends State<NoteEditorScreen> {
+  late quill.QuillController _controller;
+  final FocusNode _focusNode = FocusNode();
+  bool _isSaving = false;
+  String _title = '';
+  final _titleController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = quill.QuillController.basic();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final viewModel = context.read<NotesViewModel>();
+      if (widget.noteId != null) {
+        viewModel.openNote(widget.noteId!);
+        final note = viewModel.currentNote;
+        if (note != null) {
+          _titleController.text = note.title;
+          if (note.type == NoteType.richText && note.content.isNotEmpty) {
+            try {
+              _controller = quill.QuillController(
+                document: quill.Document.fromJson(jsonDecode(note.content)),
+                selection: const TextSelection.collapsed(offset: 0),
+              );
+            } catch (e) {
+              _controller = quill.QuillController.basic();
+            }
+          }
+        }
+      } else if (widget.createType != null) {
+        if (widget.createType == NoteType.mindMap) {
+          _navigateToMindMapEditor();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: TextField(
+          controller: _titleController,
+          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          decoration: const InputDecoration(
+            hintText: '笔记标题',
+            border: InputBorder.none,
+            hintStyle: TextStyle(color: Colors.white70),
+          ),
+          onChanged: (value) => _title = value,
+        ),
+        actions: [
+          IconButton(
+            icon: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.save),
+            onPressed: _isSaving ? null : _saveNote,
+            tooltip: '保存',
+          ),
+          PopupMenuButton<String>(
+            onSelected: _handleMenuAction,
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'favorite', child: Text('收藏')),
+              const PopupMenuItem(value: 'folder', child: Text('移动到文件夹')),
+              const PopupMenuItem(value: 'delete', child: Text('删除')),
+            ],
+          ),
+        ],
+      ),
+      body: Consumer<NotesViewModel>(
+        builder: (context, viewModel, child) {
+          final note = viewModel.currentNote;
+          final type = note?.type ?? widget.createType ?? NoteType.richText;
+
+          if (type == NoteType.mindMap) {
+            if (widget.noteId != null && note != null) {
+              return MindMapEditorScreen(noteId: widget.noteId!);
+            } else {
+              return MindMapEditorScreen(createNew: true);
+            }
+          }
+
+          return Column(
+            children: [
+              _buildToolbar(context),
+              Expanded(
+                child: quill.QuillEditor(
+                  controller: _controller,
+                  scrollController: ScrollController(),
+                  focusNode: _focusNode,
+                  configurations: const quill.QuillEditorConfigurations(
+                    placeholder: '开始记录你的想法...',
+                    readOnly: false,
+                    expands: false,
+                    padding: EdgeInsets.all(16),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildToolbar(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: quill.QuillSimpleToolbar(
+        controller: _controller,
+        configurations: quill.QuillSimpleToolbarConfigurations(
+          showAlignmentButtons: true,
+          showBackgroundColorButton: true,
+          showBoldButton: true,
+          showCenterAlignment: true,
+          showCodeBlock: false,
+          showColorButton: true,
+          showDividers: true,
+          showFontSize: true,
+          showHeaderStyle: true,
+          showIndent: true,
+          showInlineCode: true,
+          showItalicButton: true,
+          showJustifyAlignment: true,
+          showLeftAlignment: true,
+          showLink: true,
+          showListBullets: true,
+          showListCheck: true,
+          showListNumbers: true,
+          showRightAlignment: true,
+          showSearchButton: false,
+          showSmallButton: true,
+          showStrikeThrough: true,
+          showUnderLineButton: true,
+          showRedo: true,
+          showUndo: true,
+          showClearFormat: true,
+        ),
+      ),
+    );
+  }
+
+  void _navigateToMindMapEditor() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const MindMapEditorScreen(createNew: true),
+      ),
+    );
+  }
+
+  Future<void> _saveNote() async {
+    setState(() => _isSaving = true);
+
+    try {
+      final viewModel = context.read<NotesViewModel>();
+      final content = jsonEncode(_controller.document.toJson());
+      final title = _titleController.text.trim().isEmpty 
+          ? '无标题笔记' 
+          : _titleController.text.trim();
+
+      if (widget.noteId != null) {
+        final note = viewModel.currentNote;
+        if (note != null) {
+          await viewModel.updateNote(note.copyWith(
+            title: title,
+            content: content,
+            updatedAt: DateTime.now(),
+          ));
+        }
+      } else {
+        await viewModel.createNote(
+          title: title,
+          content: content,
+          type: NoteType.richText,
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('笔记已保存'), duration: Duration(seconds: 1)),
+        );
+        setState(() => _isSaving = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存失败：$e')),
+        );
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  void _handleMenuAction(String action) {
+    final viewModel = context.read<NotesViewModel>();
+    final note = viewModel.currentNote;
+    
+    if (note == null) return;
+
+    switch (action) {
+      case 'favorite':
+        viewModel.toggleFavorite(note.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(note.isFavorite ? '已取消收藏' : '已加入收藏')),
+        );
+        break;
+      case 'folder':
+        _showMoveToFolderDialog(viewModel, note);
+        break;
+      case 'delete':
+        _confirmDelete(viewModel, note);
+        break;
+    }
+  }
+
+  void _showMoveToFolderDialog(NotesViewModel viewModel, Note note) {
+    final folders = viewModel.folders;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('移动到文件夹'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: folders.length + 1,
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return ListTile(
+                  leading: const Icon(Icons.folder_open),
+                  title: const Text('无文件夹'),
+                  onTap: () {
+                    viewModel.moveNoteToFolder(note.id, null);
+                    Navigator.pop(context);
+                  },
+                );
+              }
+              final folder = folders[index - 1];
+              return ListTile(
+                leading: const Icon(Icons.folder),
+                title: Text(folder.name),
+                onTap: () {
+                  viewModel.moveNoteToFolder(note.id, folder.id);
+                  Navigator.pop(context);
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(NotesViewModel viewModel, Note note) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除笔记'),
+        content: Text('确定要删除"${note.title}"吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              viewModel.deleteNote(note.id);
+              Navigator.pop(context);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('笔记已删除')),
+              );
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+  }
+}

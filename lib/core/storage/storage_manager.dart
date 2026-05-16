@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 本地存储管理器 - SharedPreferences 封装
@@ -15,6 +16,52 @@ class StorageManager {
   /// 初始化存储
   Future<void> init() async {
     _prefs ??= await SharedPreferences.getInstance();
+  }
+  
+  /// 泛型保存方法 - 支持任意可 JSON 序列化的对象
+  Future<bool> save<T>(String key, T value) async {
+    await _ensureInit();
+    if (value is String) {
+      return await _prefs!.setString(key, value);
+    } else if (value is int) {
+      return await _prefs!.setInt(key, value);
+    } else if (value is bool) {
+      return await _prefs!.setBool(key, value);
+    } else if (value is List<String>) {
+      return await _prefs!.setStringList(key, value);
+    } else if (value is double) {
+      return await _prefs!.setDouble(key, value);
+    } else {
+      // 其他类型尝试 JSON 序列化后存储
+      final jsonStr = jsonEncode(value);
+      return await _prefs!.setString(key, jsonStr);
+    }
+  }
+  
+  /// 泛型获取方法 - 支持任意可 JSON 反序列化的对象
+  T? get<T>(String key, {T? defaultValue}) {
+    if (_prefs == null) return defaultValue;
+    
+    dynamic result;
+    if (T == String) {
+      result = _prefs!.getString(key);
+    } else if (T == int) {
+      result = _prefs!.getInt(key);
+    } else if (T == bool) {
+      result = _prefs!.getBool(key);
+    } else if (T == List<String>) {
+      result = _prefs!.getStringList(key);
+    } else if (T == double) {
+      result = _prefs!.getDouble(key);
+    } else {
+      // 其他类型尝试从 JSON 反序列化
+      final jsonStr = _prefs!.getString(key);
+      if (jsonStr != null) {
+        result = jsonDecode(jsonStr) as T;
+      }
+    }
+    
+    return result ?? defaultValue;
   }
   
   /// 保存字符串

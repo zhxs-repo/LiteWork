@@ -1,13 +1,12 @@
 import '../models/user_model.dart';
 import '../domain/repositories/user_repository.dart';
-import '../data/datasources/user_local_datasource.dart';
+import '../datasources/user_local_datasource.dart';
 
 /// 用户仓库实现
 class UserRepositoryImpl implements UserRepository {
   final UserLocalDataSource _localDataSource;
 
-  UserRepositoryImpl({required UserLocalDataSource localDataSource})
-      : _localDataSource = localDataSource;
+  UserRepositoryImpl(this._localDataSource);
 
   @override
   Future<User?> getCurrentUser() {

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import '../../features/notes/data/models/note_model.dart';
+import '../../features/notes/domain/models.dart';
 import '../storage/storage_manager.dart';
 
 /// 自动保存服务
