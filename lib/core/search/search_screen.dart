@@ -89,6 +89,65 @@ class _SearchScreenState extends State<SearchScreen> {
     return results;
   }
 
+  /// 搜索图文发布内容
+  List<SearchResult> _searchPosts(String query) {
+    final results = <SearchResult>[];
+    final keys = _storageManager.getKeys();
+    
+    for (final key in keys) {
+      if (key.startsWith('post_')) {
+        final jsonStr = _storageManager.getString(key);
+        if (jsonStr != null) {
+          try {
+            // 尝试解析为 Map 获取基本信息
+            final data = _storageManager.get<Map<String, dynamic>>(key);
+            if (data != null) {
+              final title = data['title'] as String? ?? '';
+              final content = data['content'] as String? ?? '';
+              if (title.contains(query) || content.contains(query)) {
+                results.add(SearchResult(
+                  id: data['id'] as String? ?? '',
+                  title: title,
+                  contentSnippet: content.length > 50 
+                      ? '${content.substring(0, 50)}...' 
+                      : content,
+                  type: 'post',
+                  createdAt: DateTime.tryParse(data['createdAt'] as String? ?? '') ?? DateTime.now(),
+                  updatedAt: DateTime.tryParse(data['updatedAt'] as String? ?? '') ?? DateTime.now(),
+                ));
+              }
+            }
+          } catch (e) {
+            // 忽略解析错误
+          }
+        }
+      }
+    }
+    return results;
+  }
+
+  /// 导航到详情页
+  void _navigateToDetail(BuildContext context, SearchResult result) {
+    switch (result.type) {
+      case 'note':
+        // 跳转到笔记详情页
+        Navigator.pushNamed(context, '/notes/${result.id}');
+        break;
+      case 'post':
+        // 跳转到图文编辑页
+        Navigator.pushNamed(context, '/post/editor', arguments: {'id': result.id});
+        break;
+      case 'video_project':
+        // 跳转到视频编辑器
+        Navigator.pushNamed(context, '/video-editor', arguments: {'projectId': result.id});
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('点击了：${result.title}')),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -195,10 +254,8 @@ class _SearchScreenState extends State<SearchScreen> {
             padding: EdgeInsets.zero,
           ),
           onTap: () {
-            // TODO: 跳转到对应详情页
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('点击了：${result.title}')),
-            );
+            // 跳转到对应详情页
+            _navigateToDetail(context, result);
           },
         );
       },
@@ -225,7 +282,9 @@ class _SearchScreenState extends State<SearchScreen> {
           if (_filterType == 'all' || _filterType == 'video') {
             _results.addAll(_searchVideoProjects(query));
           }
-          // TODO: 添加图文发布搜索
+          if (_filterType == 'all' || _filterType == 'post') {
+            _results.addAll(_searchPosts(query));
+          }
         }
       });
     });

@@ -136,6 +136,11 @@ class StorageManager {
       await init();
     }
   }
+  
+  /// 保存数据（任意类型）- 兼容旧代码调用
+  Future<bool> saveData<T>(String key, T value) async {
+    return await save(key, value);
+  }
 }
 
 /// 存储键常量

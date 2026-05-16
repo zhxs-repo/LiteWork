@@ -4,6 +4,81 @@ import '../viewmodel.dart';
 import '../../domain/models.dart';
 import 'note_editor_screen.dart';
 
+/// 笔记搜索委托
+class NotesSearchDelegate extends SearchDelegate {
+  final NotesViewModel viewModel;
+
+  NotesSearchDelegate({required this.viewModel});
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear),
+        onPressed: () {
+          query = '';
+        },
+      ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () {
+        close(context, null);
+      },
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildSearchResults();
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildSearchResults();
+  }
+
+  Widget _buildSearchResults() {
+    final notes = viewModel.notes;
+    final filteredNotes = notes.where((note) {
+      final queryLower = query.toLowerCase();
+      return note.title.toLowerCase().contains(queryLower) ||
+             note.content.toLowerCase().contains(queryLower);
+    }).toList();
+
+    if (filteredNotes.isEmpty) {
+      return const Center(child: Text('未找到匹配的笔记'));
+    }
+
+    return ListView.builder(
+      itemCount: filteredNotes.length,
+      itemBuilder: (context, index) {
+        final note = filteredNotes[index];
+        return ListTile(
+          leading: Icon(
+            note.isPinned ? Icons.push_pin : Icons.note,
+            color: note.isPinned ? Colors.orange : null,
+          ),
+          title: Text(note.title),
+          subtitle: Text(note.content.substring(0, note.content.length.clamp(0, 50))),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NoteEditorScreen(noteId: note.id),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
 /// 笔记列表页面
 class NotesListScreen extends StatefulWidget {
   const NotesListScreen({super.key});
@@ -314,16 +389,88 @@ class _NotesListScreenState extends State<NotesListScreen> {
   }
 
   void _showFolderManagement(BuildContext context) {
-    // TODO: 显示文件夹管理对话框
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('文件夹管理功能开发中...')),
+    // 显示文件夹管理对话框
+    final controller = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('文件夹管理'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: '新建文件夹',
+                hintText: '输入文件夹名称',
+              ),
+              onSubmitted: (value) {
+                if (value.isNotEmpty) {
+                  viewModel.createFolder(value);
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text('现有文件夹:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Consumer<NotesViewModel>(
+                builder: (context, viewModel, _) {
+                  final folders = viewModel.folders;
+                  if (folders.isEmpty) {
+                    return const Text('暂无文件夹');
+                  }
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: folders.length,
+                    itemBuilder: (context, index) {
+                      final folder = folders[index];
+                      return ListTile(
+                        leading: const Icon(Icons.folder),
+                        title: Text(folder.name),
+                        subtitle: Text('${folder.noteCount} 篇笔记'),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () {
+                            viewModel.deleteFolder(folder.id);
+                          },
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('关闭'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                viewModel.createFolder(controller.text);
+                controller.clear();
+              }
+            },
+            child: const Text('创建'),
+          ),
+        ],
+      ),
     );
   }
 
   void _showSearch(BuildContext context) {
-    // TODO: 显示搜索界面
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('搜索功能开发中...')),
+    // 显示搜索界面
+    final searchController = TextEditingController();
+    
+    showSearch(
+      context: context,
+      delegate: NotesSearchDelegate(viewModel: viewModel),
     );
   }
 

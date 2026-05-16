@@ -264,9 +264,9 @@ class NotesViewModel extends ChangeNotifier {
       notifyListeners();
       
       try {
-        // TODO: 实现同步逻辑
-        await Future.delayed(const Duration(seconds: 1));
-        _notes[index] = _notes[index].copyWith(isSynced: true);
+        // 实现同步逻辑：调用数据源的同步方法
+        await _dataSource.syncNote(noteId);
+        _notes[index] = _notes[index].copyWith(isSynced: true, lastSyncedAt: DateTime.now());
         _isLoading = false;
         notifyListeners();
       } catch (e) {

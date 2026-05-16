@@ -280,10 +280,8 @@ class _VideoListScreenState extends State<VideoListScreen> {
   void _openProject(BuildContext context, String projectId) {
     final viewModel = context.read<VideoEditorViewModel>();
     viewModel.openProject(projectId);
-    // TODO: 导航到编辑器页面
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('打开项目：$projectId')),
-    );
+    // 导航到编辑器页面
+    Navigator.pushNamed(context, '/video-editor', arguments: projectId);
   }
 
   void _handleMenuAction(BuildContext context, VideoProject project, String action, VideoEditorViewModel viewModel) {
@@ -292,9 +290,10 @@ class _VideoListScreenState extends State<VideoListScreen> {
         _openProject(context, project.id);
         break;
       case 'duplicate':
-        // TODO: 实现复制功能
+        // 实现复制功能
+        viewModel.duplicateProject(project.id);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('复制功能开发中...')),
+          const SnackBar(content: Text('项目已复制')),
         );
         break;
       case 'delete':
