@@ -1,19 +1,20 @@
 import 'package:flutter/foundation.dart';
-import '../data/models/video_project_model.dart';
-import '../data/models/media_item_model.dart';
-import '../data/models/timeline_clip_model.dart';
-import '../data/datasources/video_local_datasource.dart';
+import '../../data/models/video_project_model.dart' as data;
+import '../../data/models/media_item_model.dart';
+import '../../data/models/timeline_clip_model.dart';
+import '../../data/datasources/video_local_datasource.dart';
+import '../../domain/models.dart' as domain;
 
 class VideoEditorProvider extends ChangeNotifier {
   final VideoLocalDataSource _dataSource = VideoLocalDataSource();
   
-  VideoProject? _currentProject;
+  domain.VideoProject? _currentProject;
   List<MediaItem> _availableMedia = [];
   List<TimelineClip> _clips = [];
   bool _isLoading = false;
   String? _error;
 
-  VideoProject? get currentProject => _currentProject;
+  domain.VideoProject? get currentProject => _currentProject;
   List<MediaItem> get availableMedia => _availableMedia;
   List<TimelineClip> get clips => _clips;
   bool get isLoading => _isLoading;
@@ -28,17 +29,24 @@ class VideoEditorProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final project = VideoProject(
+      final dataProject = data.VideoProject(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: name,
+        title: name,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        aspectRatio: '9:16',
-        durationMs: 0,
       );
 
-      await _dataSource.saveProject(project);
-      _currentProject = project;
+      await _dataSource.saveProject(dataProject);
+      
+      // 转换为 domain 模型
+      _currentProject = domain.VideoProject(
+        id: dataProject.id,
+        title: dataProject.title,
+        clips: [],
+        status: domain.ProjectStatus.draft,
+        createdAt: dataProject.createdAt,
+        updatedAt: dataProject.updatedAt,
+      );
       _clips = [];
       
       _isLoading = false;
@@ -55,11 +63,21 @@ class VideoEditorProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final project = await _dataSource.getProjectById(projectId);
-      if (project != null) {
-        _currentProject = project;
-        // TODO: 加载对应的 clips
-        _clips = [];
+      final dataProject = await _dataSource.getProjectById(projectId);
+      if (dataProject != null) {
+        // 转换为 domain 模型
+        _currentProject = domain.VideoProject(
+          id: dataProject.id,
+          title: dataProject.title,
+          clips: [],
+          status: domain.ProjectStatus.draft,
+          createdAt: dataProject.createdAt,
+          updatedAt: dataProject.updatedAt,
+        );
+        
+        // 加载对应的 clips
+        final clipsData = await _dataSource.getClipsForProject(projectId);
+        _clips = clipsData;
       }
 
       _isLoading = false;

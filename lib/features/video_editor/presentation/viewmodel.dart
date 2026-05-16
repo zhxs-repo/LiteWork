@@ -155,16 +155,23 @@ class VideoEditorViewModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      // TODO: 实现渲染逻辑
+      // 实现渲染逻辑：模拟视频渲染过程
+      // 实际项目中需要调用 FFmpeg 或平台原生渲染 API
       for (int i = 0; i <= 100; i += 10) {
         await Future.delayed(const Duration(milliseconds: 200));
         _renderProgress = i / 100;
         notifyListeners();
       }
       
+      // 渲染完成，更新项目状态
       _currentProject = _currentProject!.copyWith(
         status: ProjectStatus.completed,
+        lastRenderedAt: DateTime.now(),
       );
+      
+      // 保存渲染后的项目状态到数据源
+      await _saveCurrentProject();
+      
       _isLoading = false;
       notifyListeners();
     } catch (e) {

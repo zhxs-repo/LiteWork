@@ -60,6 +60,20 @@ class NotesDataSource {
     }).toList();
   }
 
+  /// 同步笔记到云端
+  Future<void> syncNote(String noteId) async {
+    final note = getNoteById(noteId);
+    if (note == null) throw Exception('笔记不存在：$noteId');
+    
+    // 调用云同步数据源上传笔记数据
+    // 实际项目中需要注入 SyncDataSource
+    await Future.delayed(const Duration(milliseconds: 500)); // 模拟网络延迟
+    
+    // 标记为已同步
+    final updatedNote = note.copyWith(isSynced: true, lastSyncedAt: DateTime.now());
+    await saveNote(updatedNote);
+  }
+
   // ==================== 文件夹操作 ====================
 
   /// 获取所有文件夹

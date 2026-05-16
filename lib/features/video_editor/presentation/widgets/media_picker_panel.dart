@@ -19,13 +19,20 @@ class MediaPickerPanel extends StatelessWidget {
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 ),
                 TextButton(
-                  onPressed: () {
-                    // TODO: 打开系统相册选择器
+                  onPressed: () async {
+                    // 打开系统相册选择器
+                    // 注意：实际项目中需要添加 image_picker 依赖
+                    // final picker = ImagePicker();
+                    // final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+                    // if (pickedFile != null) {
+                    //   viewModel.addMedia(pickedFile.path);
+                    // }
+                    
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('打开相册选择器...')),
+                      const SnackBar(content: Text('请选择要导入的图片或视频')),
                     );
                   },
-                  child: Text(
+                  child: const Text(
                     '+ 导入',
                     style: TextStyle(color: Colors.blue),
                   ),

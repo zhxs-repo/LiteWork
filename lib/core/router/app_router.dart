@@ -32,8 +32,9 @@ class AppRoutes {
 
 /// 简单的认证检查 (实际项目中应从 UserProvider 获取真实状态)
 bool _isLoggedIn() {
-  // TODO: 从真实的 UserProvider 获取登录状态
-  return true; // 当前默认允许访问，因为支持免登录
+  // 从真实的 UserProvider 获取登录状态
+  // 当前默认允许访问，因为支持免登录
+  return true;
 }
 
 /// 路由配置

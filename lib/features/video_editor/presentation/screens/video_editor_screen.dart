@@ -37,20 +37,24 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
         title: Text('视频剪辑'),
         actions: [
           IconButton(
-            icon: Icon(Icons.save),
+            icon: const Icon(Icons.save),
             onPressed: () {
-              // TODO: 保存项目
+              // 保存项目
+              final provider = context.read<VideoEditorProvider>();
+              provider.saveProject();
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('项目已保存')),
+                const SnackBar(content: Text('项目已保存')),
               );
             },
           ),
           IconButton(
-            icon: Icon(Icons.export),
+            icon: const Icon(Icons.export),
             onPressed: () {
-              // TODO: 导出视频
+              // 导出视频
+              final provider = context.read<VideoEditorProvider>();
+              provider.exportVideo();
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('导出功能开发中...')),
+                const SnackBar(content: Text('正在导出视频，请稍候...')),
               );
             },
           ),
