@@ -28,12 +28,15 @@ dependencies:
   
   # 富文本编辑器
   flutter_quill: ^11.5.0
-  
-  # 视频处理相关
+
+  # 视频与媒体处理 (新增)
   video_player: ^2.9.2
-  camera: ^0.11.0
+  chewie: ^1.7.0
+  image_picker: ^1.0.0
   ffmpeg_kit_flutter: ^6.0.3
   path_provider: ^2.1.4
+  gallery_saver: ^2.3.2
+  camera: ^0.11.0
   
   # 网络请求
   dio: ^5.7.0
