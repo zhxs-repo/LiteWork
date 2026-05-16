@@ -12,12 +12,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.24.0'
           channel: 'stable'
           cache: true
 
@@ -37,17 +37,10 @@ jobs:
         run: flutter build apk --debug
 
       - name: Build iOS (No codesign)
-        run: flutter build ios --no-codesim
+        run: flutter build ios --no-codesign
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: lite-work-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
-
-      - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v3
-        if: success()
-        with:
-          file: ./coverage/lcov.info
-          fail_ci_if_error: false
