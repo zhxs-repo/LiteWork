@@ -124,8 +124,11 @@ class VideoLocalDataSource {
       'id': media.id,
       'path': media.path,
       'type': media.type.index,
-      'duration': media.duration?.inSeconds,
+      'durationMs': media.durationMs,
+      'sizeBytes': media.sizeBytes,
       'thumbnailPath': media.thumbnailPath,
+      'width': media.width,
+      'height': media.height,
       'createdAt': media.createdAt.toIso8601String(),
     };
   }
@@ -135,10 +138,11 @@ class VideoLocalDataSource {
       id: data['id'] as String,
       path: data['path'] as String,
       type: MediaType.values[data['type'] as int],
-      duration: data['duration'] != null
-          ? Duration(seconds: data['duration'] as int)
-          : null,
+      durationMs: (data['durationMs'] as int?) ?? 0,
+      sizeBytes: (data['sizeBytes'] as int?) ?? 0,
       thumbnailPath: data['thumbnailPath'] as String?,
+      width: data['width'] as int?,
+      height: data['height'] as int?,
       createdAt: DateTime.parse(data['createdAt'] as String),
     );
   }
@@ -148,10 +152,16 @@ class VideoLocalDataSource {
       'id': clip.id,
       'projectId': clip.projectId,
       'mediaId': clip.mediaId,
-      'startTime': clip.startTime.inMilliseconds,
-      'endTime': clip.endTime.inMilliseconds,
       'trackIndex': clip.trackIndex,
-      'position': clip.position.inMilliseconds,
+      'startTimeMs': clip.startTimeMs,
+      'endTimeMs': clip.endTimeMs,
+      'durationMs': clip.durationMs,
+      'positionMs': clip.positionMs,
+      'trimStartMs': clip.trimStartMs,
+      'trimEndMs': clip.trimEndMs,
+      'speed': clip.speed,
+      'isReversed': clip.isReversed,
+      'effects': clip.effects,
     };
   }
 
@@ -160,10 +170,16 @@ class VideoLocalDataSource {
       id: data['id'] as String,
       projectId: data['projectId'] as String,
       mediaId: data['mediaId'] as String,
-      startTime: Duration(milliseconds: data['startTime'] as int),
-      endTime: Duration(milliseconds: data['endTime'] as int),
       trackIndex: data['trackIndex'] as int,
-      position: Duration(milliseconds: data['position'] as int),
+      startTimeMs: data['startTimeMs'] as int,
+      endTimeMs: data['endTimeMs'] as int,
+      durationMs: data['durationMs'] as int,
+      positionMs: data['positionMs'] as int,
+      trimStartMs: (data['trimStartMs'] as int?) ?? 0,
+      trimEndMs: (data['trimEndMs'] as int?) ?? 0,
+      speed: (data['speed'] as num?)?.toDouble() ?? 1.0,
+      isReversed: (data['isReversed'] as bool?) ?? false,
+      effects: data['effects'] as Map<String, dynamic>?,
     );
   }
 }
