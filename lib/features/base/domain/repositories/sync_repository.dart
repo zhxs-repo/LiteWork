@@ -1,4 +1,4 @@
-import 'datasources/sync_datasource.dart';
+import '../../data/datasources/sync_datasource.dart';
 
 /// 同步仓库接口
 abstract class ISyncRepository {

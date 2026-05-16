@@ -1,5 +1,7 @@
 /// 短视频剪辑模块 - 数据模型
 
+import '../../data/models/timeline_clip_model.dart';
+
 /// 视频项目模型
 class VideoProject {
   final String id;
