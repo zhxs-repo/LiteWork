@@ -3,20 +3,50 @@
 import 'package:flutter/foundation.dart';
 import '../domain/models.dart';
 import '../data/note_datasource.dart';
+import '../data/datasources/trash_datasource.dart';
+
+/// 回收站项目模型
+class TrashItem {
+  final String id;
+  final String type; // 'note' or 'folder'
+  final Map<String, dynamic> data;
+  final DateTime deletedAt;
+
+  TrashItem({
+    required this.id,
+    required this.type,
+    required this.data,
+    required this.deletedAt,
+  });
+
+  factory TrashItem.fromMapEntry(MapEntry<String, Map> entry) {
+    final data = entry.value;
+    return TrashItem(
+      id: entry.key,
+      type: data['type'] as String,
+      data: data['data'] as Map<String, dynamic>,
+      deletedAt: DateTime.parse(data['deletedAt'] as String),
+    );
+  }
+}
 
 /// 笔记管理 ViewModel
 class NotesViewModel extends ChangeNotifier {
   final NotesDataSource _dataSource = NotesDataSource();
+  final TrashDataSource _trashDataSource = TrashDataSource();
   final List<Note> _notes = [];
   final List<NoteFolder> _folders = [];
+  final List<TrashItem> _trashItems = [];
   Note? _currentNote;
   bool _isLoading = false;
   String? _error;
   String? _selectedFolderId;
   bool _isInitialized = false;
+  bool _isTrashInitialized = false;
   
   List<Note> get notes => _notes;
   List<NoteFolder> get folders => _folders;
+  List<TrashItem> get trashItems => _trashItems;
   Note? get currentNote => _currentNote;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -274,6 +304,125 @@ class NotesViewModel extends ChangeNotifier {
         _error = e.toString();
         notifyListeners();
       }
+    }
+  }
+  
+  /// 加载回收站项目
+  Future<void> loadTrashItems() async {
+    if (_isTrashInitialized) return;
+    
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      await _trashDataSource.init();
+      final items = _trashDataSource.getAll();
+      _trashItems.clear();
+      _trashItems.addAll(items.map((e) => TrashItem.fromMapEntry(e)).toList());
+      _isTrashInitialized = true;
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = '加载回收站失败：${e.toString()}';
+      notifyListeners();
+    }
+  }
+  
+  /// 从回收站恢复项目
+  Future<void> restoreFromTrash(String itemId) async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      final result = await _trashDataSource.restore(itemId);
+      if (result == null) {
+        throw Exception('项目不存在');
+      }
+      
+      final type = result['type'] as String;
+      final data = result['data'] as Map<String, dynamic>;
+      
+      if (type == 'note') {
+        // 恢复笔记
+        final note = Note(
+          id: data['id'] as String,
+          title: data['title'] as String,
+          content: data['content'] as String,
+          type: NoteType.values.firstWhere((e) => e.name == data['type'], orElse: () => NoteType.richText),
+          folderId: data['folderId'] as String?,
+          isFavorite: data['isFavorite'] as bool? ?? false,
+          isSynced: data['isSynced'] as bool? ?? false,
+          createdAt: DateTime.parse(data['createdAt'] as String),
+          updatedAt: DateTime.now(),
+        );
+        await _dataSource.saveNote(note);
+        final existingIndex = _notes.indexWhere((n) => n.id == note.id);
+        if (existingIndex != -1) {
+          _notes[existingIndex] = note;
+        } else {
+          _notes.insert(0, note);
+        }
+      } else if (type == 'folder') {
+        // 恢复文件夹
+        final folder = NoteFolder(
+          id: data['id'] as String,
+          name: data['name'] as String,
+          parentId: data['parentId'] as String?,
+          createdAt: DateTime.parse(data['createdAt'] as String),
+        );
+        await _dataSource.saveFolder(folder);
+        final existingIndex = _folders.indexWhere((f) => f.id == folder.id);
+        if (existingIndex != -1) {
+          _folders[existingIndex] = folder;
+        } else {
+          _folders.add(folder);
+        }
+      }
+      
+      // 从本地缓存移除
+      _trashItems.removeWhere((item) => item.id == itemId);
+      
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = '恢复失败：${e.toString()}';
+      notifyListeners();
+    }
+  }
+  
+  /// 彻底删除回收站项目
+  Future<void> deletePermanently(String itemId) async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      await _trashDataSource.deletePermanently(itemId);
+      _trashItems.removeWhere((item) => item.id == itemId);
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = '删除失败：${e.toString()}';
+      notifyListeners();
+    }
+  }
+  
+  /// 清空回收站
+  Future<void> clearTrash() async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      await _trashDataSource.clear();
+      _trashItems.clear();
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = '清空回收站失败：${e.toString()}';
+      notifyListeners();
     }
   }
   

@@ -1,4 +1,4 @@
-import '../models/timeline_data_model.dart';
+import '../domain/models.dart';
 
 /// 时间线编辑用例
 /// 负责处理时间线相关的业务逻辑，如片段排序、时长计算等
