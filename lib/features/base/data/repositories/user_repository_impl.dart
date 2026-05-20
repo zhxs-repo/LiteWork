@@ -1,5 +1,5 @@
 import '../models/user_model.dart';
-import '../domain/repositories/user_repository.dart';
+import '../../domain/repositories/user_repository.dart';
 import '../datasources/user_local_datasource.dart';
 
 /// 用户仓库实现

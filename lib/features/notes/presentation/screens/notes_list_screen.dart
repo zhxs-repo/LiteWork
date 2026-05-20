@@ -389,7 +389,7 @@ class _NotesListScreenState extends State<NotesListScreen> {
   }
 
   void _showFolderManagement(BuildContext context) {
-    // 显示文件夹管理对话框
+    final viewModel = context.read<NotesViewModel>();
     final controller = TextEditingController();
     
     showDialog(
@@ -465,9 +465,7 @@ class _NotesListScreenState extends State<NotesListScreen> {
   }
 
   void _showSearch(BuildContext context) {
-    // 显示搜索界面
-    final searchController = TextEditingController();
-    
+    final viewModel = context.read<NotesViewModel>();
     showSearch(
       context: context,
       delegate: NotesSearchDelegate(viewModel: viewModel),

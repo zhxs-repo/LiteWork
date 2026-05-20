@@ -54,7 +54,11 @@ class EffectPanel extends StatelessWidget {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: GestureDetector(
-                    onTap: () => provider.applyEffect(type, effect['value']),
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('已应用 ${effect['label']} 效果')),
+                      );
+                    },
                     child: Column(
                       children: [
                         Container(

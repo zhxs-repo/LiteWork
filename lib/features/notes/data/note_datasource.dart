@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import '../../domain/models.dart';
+import '../domain/models.dart';
 import '../../../core/storage/storage_manager.dart';
 
 /// 笔记数据源 - Hive 实现
@@ -115,8 +115,10 @@ class NotesDataSource {
       'folderId': note.folderId,
       'isFavorite': note.isFavorite,
       'isSynced': note.isSynced,
+      'isPinned': note.isPinned,
       'createdAt': note.createdAt.toIso8601String(),
       'updatedAt': note.updatedAt.toIso8601String(),
+      if (note.lastSyncedAt != null) 'lastSyncedAt': note.lastSyncedAt!.toIso8601String(),
       if (note.mindMapData != null) 'mindMapData': _mindMapToMap(note.mindMapData!),
     };
   }
@@ -137,15 +139,19 @@ class NotesDataSource {
       mindMapData: mindMapData,
       isFavorite: data['isFavorite'] as bool? ?? false,
       isSynced: data['isSynced'] as bool? ?? false,
+      isPinned: data['isPinned'] as bool? ?? false,
       createdAt: DateTime.parse(data['createdAt'] as String),
       updatedAt: DateTime.parse(data['updatedAt'] as String),
+      lastSyncedAt: data['lastSyncedAt'] != null 
+          ? DateTime.parse(data['lastSyncedAt'] as String) 
+          : null,
     );
   }
 
   Map<String, dynamic> _mindMapToMap(MindMapData mindMap) {
     return {
       'root': _nodeToMap(mindMap.root),
-      'nodes': mindMap.nodes.map((k, v) => MapEntry(k, _nodeToMap(v))).toMap(),
+      'nodes': mindMap.nodes.map((k, v) => MapEntry(k, _nodeToMap(v))),
       'layout': mindMap.layout.index,
     };
   }
@@ -195,7 +201,7 @@ class NotesDataSource {
       'backgroundColor': style.backgroundColor,
       'textColor': style.textColor,
       'fontSize': style.fontSize,
-      'fontWeight': style.fontWeight?.index,
+      'fontWeightIndex': style.fontWeightIndex,
       'borderColor': style.borderColor,
       'borderWidth': style.borderWidth,
     };
@@ -207,9 +213,7 @@ class NotesDataSource {
       backgroundColor: data['backgroundColor'] as String?,
       textColor: data['textColor'] as String?,
       fontSize: data['fontSize'] as double?,
-      fontWeight: data['fontWeight'] != null 
-          ? FontWeight.values[data['fontWeight'] as int] 
-          : null,
+      fontWeightIndex: data['fontWeightIndex'] as int?,
       borderColor: data['borderColor'] as String?,
       borderWidth: data['borderWidth'] as double?,
     );

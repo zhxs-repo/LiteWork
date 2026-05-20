@@ -1,4 +1,4 @@
-import '../models/user_model.dart';
+import '../../data/models/user_model.dart';
 
 /// 用户仓库接口
 abstract class UserRepository {

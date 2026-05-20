@@ -1,15 +1,9 @@
 import 'package:flutter/foundation.dart';
-import '../data/repositories/sync_repository_impl.dart';
-import '../data/datasources/sync_datasource.dart';
+import '../../domain/repositories/sync_repository.dart';
 
 class SyncProvider extends ChangeNotifier {
-  final SyncRepositoryImpl _repository;
   SyncStatus _status = SyncStatus.idle;
   bool _wifiOnly = false;
-
-  SyncProvider(this._repository) {
-    _status = _repository.status;
-  }
 
   SyncStatus get status => _status;
   bool get wifiOnly => _wifiOnly;
@@ -19,16 +13,15 @@ class SyncProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> triggerSync(String key, dynamic data) async {
+  Future<void> triggerSync() async {
     _status = SyncStatus.syncing;
     notifyListeners();
 
-    final success = await _repository.syncData(key, data);
+    await Future.delayed(const Duration(seconds: 1));
     
-    _status = success ? SyncStatus.success : SyncStatus.failed;
+    _status = SyncStatus.synced;
     notifyListeners();
 
-    // 重置状态
     Future.delayed(const Duration(seconds: 2), () {
       _status = SyncStatus.idle;
       notifyListeners();

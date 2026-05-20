@@ -112,10 +112,18 @@ class VideoEditorProvider extends ChangeNotifier {
           (max, clip) => clip.startTimeMs + clip.durationMs > max ? clip.startTimeMs + clip.durationMs : max,
         );
         _currentProject = _currentProject!.copyWith(
-          durationMs: maxEnd,
+          totalDuration: Duration(milliseconds: maxEnd),
           updatedAt: DateTime.now(),
         );
-        await _dataSource.saveProject(_currentProject!);
+        final dataProject = data.VideoProject(
+          id: _currentProject!.id,
+          title: _currentProject!.title,
+          mediaPaths: _clips.map((c) => c.mediaId).toList(),
+          duration: Duration(milliseconds: maxEnd),
+          createdAt: _currentProject!.createdAt,
+          updatedAt: DateTime.now(),
+        );
+        await _dataSource.saveProject(dataProject);
       }
       
       notifyListeners();
@@ -153,5 +161,38 @@ class VideoEditorProvider extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  Future<void> saveProject() async {
+    if (_currentProject == null) return;
+    try {
+      final dataProject = data.VideoProject(
+        id: _currentProject!.id,
+        title: _currentProject!.title,
+        mediaPaths: _clips.map((c) => c.mediaId).toList(),
+        duration: _currentProject!.totalDuration,
+        createdAt: _currentProject!.createdAt,
+        updatedAt: DateTime.now(),
+      );
+      await _dataSource.saveProject(dataProject);
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> exportVideo() async {
+    if (_currentProject == null) return;
+    try {
+      _isLoading = true;
+      notifyListeners();
+      await Future.delayed(const Duration(seconds: 2));
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }

@@ -1,5 +1,5 @@
-import '../domain/repositories/user_repository.dart';
-import '../models/user_model.dart';
+import '../repositories/user_repository.dart';
+import '../../data/models/user_model.dart';
 
 /// 获取或创建游客用户用例
 class GetOrCreateGuestUser {

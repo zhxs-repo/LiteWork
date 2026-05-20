@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:quill_delta/quill_delta.dart';
-import '../domain/usecases/post_usecases.dart';
+import 'package:dart_quill_delta/dart_quill_delta.dart';
+import '../../domain/usecases/post_usecases.dart';
 import '../../data/models/post_document_model.dart';
 
 /// 帖子编辑器状态

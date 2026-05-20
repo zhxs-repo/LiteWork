@@ -67,7 +67,7 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
         backgroundColor: '#FF6B6B',
         textColor: '#FFFFFF',
         fontSize: 18,
-        fontWeight: FontWeight.bold,
+        fontWeightIndex: 7,
       ),
       x: 400,
       y: 300,
@@ -557,7 +557,9 @@ class MindMapPainter extends CustomPainter {
             ? _hexToColor(node.style.textColor!) 
             : Colors.white,
         fontSize: node.style.fontSize ?? 14,
-        fontWeight: node.style.fontWeight ?? FontWeight.normal,
+        fontWeight: node.style.fontWeightIndex != null 
+            ? FontWeight.values[node.style.fontWeightIndex!] 
+            : FontWeight.normal,
       ),
     );
 

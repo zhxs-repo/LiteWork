@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class EditorToolbar extends StatelessWidget {
+  const EditorToolbar({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Container(

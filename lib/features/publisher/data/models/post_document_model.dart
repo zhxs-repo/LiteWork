@@ -1,4 +1,4 @@
-import 'package:quill_delta/quill_delta.dart';
+import 'package:dart_quill_delta/dart_quill_delta.dart';
 
 /// 图文帖子文档模型
 class PostDocumentModel {

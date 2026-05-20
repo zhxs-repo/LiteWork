@@ -14,7 +14,7 @@ class AutoSaveService {
   AutoSaveService(this._storageManager);
 
   /// 带防抖的保存方法
-  void saveWithDebounce(NoteModel note, Function() onComplete) {
+  void saveWithDebounce(Note note, Function() onComplete) {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(_debounceDuration, () {
       _saveNote(note);
@@ -22,9 +22,22 @@ class AutoSaveService {
     });
   }
 
-  void _saveNote(NoteModel note) {
-    final jsonStr = jsonEncode(note.toJson());
-    _storageManager.saveData('note_${note.id}', jsonStr);
+  void _saveNote(Note note) {
+    final data = {
+      'id': note.id,
+      'title': note.title,
+      'content': note.content,
+      'type': note.type.index,
+      'tags': note.tags,
+      'folderId': note.folderId,
+      'isFavorite': note.isFavorite,
+      'isSynced': note.isSynced,
+      'isPinned': note.isPinned,
+      'createdAt': note.createdAt.toIso8601String(),
+      'updatedAt': note.updatedAt.toIso8601String(),
+    };
+    final jsonStr = jsonEncode(data);
+    _storageManager.save('note_${note.id}', jsonStr);
   }
 
   void dispose() {

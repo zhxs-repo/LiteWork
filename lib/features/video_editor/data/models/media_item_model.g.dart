@@ -3,32 +3,8 @@
 part of 'media_item_model.dart';
 
 // **************************************************************************
-// HiveGenerator
+// TypeAdapterGenerator
 // **************************************************************************
-
-class MediaItemTypeAdapter extends TypeAdapter<MediaType> {
-  @override
-  final int typeId = 20;
-
-  @override
-  MediaType read(BinaryReader reader) {
-    switch (reader.readByte()) {
-      case 0: return MediaType.video;
-      case 1: return MediaType.image;
-      case 2: return MediaType.audio;
-      default: throw Exception('Unknown MediaType value');
-    }
-  }
-
-  @override
-  void write(BinaryWriter writer, MediaType obj) {
-    switch (obj) {
-      case MediaType.video: writer.writeByte(0); break;
-      case MediaType.image: writer.writeByte(1); break;
-      case MediaType.audio: writer.writeByte(2); break;
-    }
-  }
-}
 
 class MediaItemAdapter extends TypeAdapter<MediaItem> {
   @override
@@ -36,36 +12,45 @@ class MediaItemAdapter extends TypeAdapter<MediaItem> {
 
   @override
   MediaItem read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
     return MediaItem(
-      id: reader.read(0) as String,
-      path: reader.read(1) as String,
-      type: reader.read(2) as MediaType,
-      durationMs: reader.read(3) as int? ?? 0,
-      sizeBytes: reader.read(4) as int? ?? 0,
-      createdAt: reader.read(5) as DateTime,
-      thumbnailPath: reader.read(6) as String?,
-      width: reader.read(7) as int?,
-      height: reader.read(8) as int?,
+      id: fields[0] as String,
+      path: fields[1] as String,
+      type: fields[2] as MediaType,
+      durationMs: fields[3] as int,
+      sizeBytes: fields[4] as int,
+      createdAt: fields[5] as DateTime,
+      thumbnailPath: fields[6] as String?,
+      width: fields[7] as int?,
+      height: fields[8] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, MediaItem obj) {
-    writer.writeString(0, obj.id);
-    writer.writeString(1, obj.path);
-    writer.write(2, obj.type);
-    writer.writeInt(3, obj.durationMs);
-    writer.writeInt(4, obj.sizeBytes);
-    writer.write(5, obj.createdAt);
-    if (obj.thumbnailPath != null) {
-      writer.writeString(6, obj.thumbnailPath!);
-    }
-    if (obj.width != null) {
-      writer.writeInt(7, obj.width!);
-    }
-    if (obj.height != null) {
-      writer.writeInt(8, obj.height!);
-    }
+    writer
+      ..writeByte(9)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.path)
+      ..writeByte(2)
+      ..write(obj.type)
+      ..writeByte(3)
+      ..write(obj.durationMs)
+      ..writeByte(4)
+      ..write(obj.sizeBytes)
+      ..writeByte(5)
+      ..write(obj.createdAt)
+      ..writeByte(6)
+      ..write(obj.thumbnailPath)
+      ..writeByte(7)
+      ..write(obj.width)
+      ..writeByte(8)
+      ..write(obj.height);
   }
 
   @override
@@ -75,6 +60,50 @@ class MediaItemAdapter extends TypeAdapter<MediaItem> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is MediaItemAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class MediaTypeAdapter extends TypeAdapter<MediaType> {
+  @override
+  final int typeId = 20;
+
+  @override
+  MediaType read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return MediaType.video;
+      case 1:
+        return MediaType.image;
+      case 2:
+        return MediaType.audio;
+      default:
+        return MediaType.video;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, MediaType obj) {
+    switch (obj) {
+      case MediaType.video:
+        writer.writeByte(0);
+        break;
+      case MediaType.image:
+        writer.writeByte(1);
+        break;
+      case MediaType.audio:
+        writer.writeByte(2);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MediaTypeAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

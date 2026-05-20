@@ -9,11 +9,11 @@ class PreviewPlayer extends StatefulWidget {
   final Function(Duration)? onPositionChanged;
 
   const PreviewPlayer({
-    Key? key,
+    super.key,
     this.videoPath,
     this.currentPosition,
     this.onPositionChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<PreviewPlayer> createState() => _PreviewPlayerState();
@@ -35,12 +35,10 @@ class _PreviewPlayerState extends State<PreviewPlayer> {
   @override
   void didUpdateWidget(PreviewPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 视频路径变化时重新初始化
     if (widget.videoPath != null && widget.videoPath != oldWidget.videoPath) {
       _disposeControllers();
       _initializePlayer(widget.videoPath!);
     }
-    // 同步播放位置
     if (widget.currentPosition != null && _isInitialized) {
       _seekTo(widget.currentPosition!);
     }
@@ -66,7 +64,6 @@ class _PreviewPlayerState extends State<PreviewPlayer> {
         ],
       );
 
-      // 监听播放位置变化
       _videoController!.addListener(() {
         if (widget.onPositionChanged != null && _videoController!.value.isInitialized) {
           widget.onPositionChanged!(_videoController!.value.position);
@@ -128,14 +125,14 @@ class _PreviewPlayerState extends State<PreviewPlayer> {
   }
 
   Widget _buildPlaceholder() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.play_circle_outline, size: 64, color: Colors.white70),
           SizedBox(height: 16),
           Text(
-            widget.videoPath == null ? '请选择视频素材' : '加载视频中...',
+            '预览播放器',
             style: TextStyle(color: Colors.white70),
           ),
           SizedBox(height: 8),

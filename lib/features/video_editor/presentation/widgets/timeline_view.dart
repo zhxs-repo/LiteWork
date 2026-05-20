@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class TimelineView extends StatelessWidget {
+  const TimelineView({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -103,7 +105,6 @@ class _RulerPainter extends CustomPainter {
 
     final textPainter = TextPainter(
       textDirection: TextDirection.ltr,
-      textStyle: TextStyle(color: Colors.white54, fontSize: 10),
     );
 
     for (int i = 0; i < 20; i++) {
@@ -111,7 +112,7 @@ class _RulerPainter extends CustomPainter {
       canvas.drawLine(Offset(x, 0), Offset(x, 15), paint);
       
       if (i % 5 == 0) {
-        textPainter.text = TextSpan(text: '${i}s');
+        textPainter.text = TextSpan(text: '${i}s', style: const TextStyle(color: Colors.white54, fontSize: 10));
         textPainter.layout();
         textPainter.paint(canvas, Offset(x + 2, 18));
       }

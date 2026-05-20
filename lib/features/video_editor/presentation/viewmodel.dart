@@ -1,9 +1,9 @@
 /// 短视频剪辑模块 - ViewModel (MVVM)
 
 import 'package:flutter/foundation.dart';
-import '../domain/models.dart';
-import '../../data/datasources/video_local_datasource.dart';
-import '../../data/models/video_project_model.dart' as data_models;
+import 'package:litework/features/video_editor/data/datasources/video_local_datasource.dart';
+import 'package:litework/features/video_editor/data/models/video_project_model.dart' as data_models;
+import 'package:litework/features/video_editor/domain/models.dart';
 
 /// 视频编辑 ViewModel
 class VideoEditorViewModel extends ChangeNotifier {
@@ -161,11 +161,10 @@ class VideoEditorViewModel extends ChangeNotifier {
       // 渲染完成，更新项目状态
       _currentProject = _currentProject!.copyWith(
         status: ProjectStatus.completed,
-        lastRenderedAt: DateTime.now(),
       );
       
       // 保存渲染后的项目状态到数据源
-      await _saveCurrentProject();
+      await saveCurrentProject();
       
       _isLoading = false;
       notifyListeners();
@@ -311,6 +310,56 @@ class VideoEditorViewModel extends ChangeNotifier {
     }
   }
   
+  /// 复制项目
+  Future<void> duplicateProject(String id) async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      final original = _projects.firstWhere((p) => p.id == id);
+      final newProject = VideoProject(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: '${original.title} (副本)',
+        clips: original.clips.map((clip) => VideoClip(
+          id: '${clip.id}_copy',
+          sourcePath: clip.sourcePath,
+          startTime: clip.startTime,
+          endTime: clip.endTime,
+          duration: clip.duration,
+          volume: clip.volume,
+          effects: List.from(clip.effects),
+          transition: clip.transition,
+        )).toList(),
+        status: ProjectStatus.draft,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        thumbnailPath: original.thumbnailPath,
+      );
+      
+      final projectData = data_models.VideoProject(
+        id: newProject.id,
+        title: newProject.title,
+        mediaPaths: newProject.clips.map((c) => c.sourcePath).toList(),
+        duration: newProject.clips.fold<Duration>(
+          Duration.zero,
+          (total, clip) => total + clip.duration,
+        ),
+        createdAt: newProject.createdAt,
+        updatedAt: newProject.updatedAt,
+        thumbnailPath: newProject.thumbnailPath,
+      );
+      
+      await _dataSource.saveProject(projectData);
+      _projects.insert(0, newProject);
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+  
   /// 清空错误
   void clearError() {
     _error = null;
@@ -323,10 +372,8 @@ class VideoEditorViewModel extends ChangeNotifier {
     return VideoProject(
       id: data.id,
       title: data.title,
-      clips: [], // 简化处理，实际需要从 clipsBox 加载
+      clips: [],
       status: ProjectStatus.draft,
-      resolution: '1080p',
-      fps: 30,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       thumbnailPath: data.thumbnailPath,

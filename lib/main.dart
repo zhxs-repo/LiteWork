@@ -49,7 +49,7 @@ class LiteWorkApp extends StatelessWidget {
           create: (context) {
             final storageManager = StorageManager();
             final localDataSource = UserLocalDataSource(storageManager: storageManager);
-            final repository = UserRepositoryImpl(localDataSource: localDataSource);
+            final repository = UserRepositoryImpl(localDataSource);
             
             return UserProvider(
               getOrCreateGuestUser: GetOrCreateGuestUser(repository),
