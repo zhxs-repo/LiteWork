@@ -1,37 +1,40 @@
 ```
-# Flutter/Dart specific
-.dart_tool/
-.packages
-pubspec.lock
-
-# Build outputs
+# Build artifacts
 build/
-**/ios/Flutter/.last_build_id
+*.o
+*.obj
+*.so
+*.a
+*.dll
+*.exe
+*.out
 
-# Temporary files
-*.tmp
-*.temp
+# Dependencies
+.pub/
+.dart_tool/
+packages/
+
+# Logs
 *.log
 
-# Environment variables
+# Environment
 .env
 .env.local
 *.env.*
 
-# IDE files
+# Editor/IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS generated files
-.DS_Store
-Thumbs.db
+*.tmp
 
 # Coverage
 coverage/
-*.lcov
+htmlcov/
+.coverage
 
-# Packages
-node_modules/
+# OS
+.DS_Store
+Thumbs.db
 ```
