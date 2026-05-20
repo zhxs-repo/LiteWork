@@ -114,15 +114,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             children: [
               _buildToolbar(context),
               Expanded(
-                child: quill.QuillEditor(
-                  controller: _controller,
-                  scrollController: ScrollController(),
-                  focusNode: _focusNode,
-                  configurations: const quill.QuillEditorConfigurations(
-                    placeholder: '开始记录你的想法...',
-                    readOnly: false,
-                    expands: false,
-                    padding: EdgeInsets.all(16),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: quill.QuillEditor(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    scrollController: ScrollController(),
                   ),
                 ),
               ),
@@ -147,34 +144,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       ),
       child: quill.QuillSimpleToolbar(
         controller: _controller,
-        configurations: quill.QuillSimpleToolbarConfigurations(
-          showAlignmentButtons: true,
-          showBackgroundColorButton: true,
-          showBoldButton: true,
-          showCenterAlignment: true,
-          showCodeBlock: false,
-          showColorButton: true,
-          showDividers: true,
-          showFontSize: true,
-          showHeaderStyle: true,
-          showIndent: true,
-          showInlineCode: true,
-          showItalicButton: true,
-          showJustifyAlignment: true,
-          showLeftAlignment: true,
-          showLink: true,
-          showListBullets: true,
-          showListCheck: true,
-          showListNumbers: true,
-          showRightAlignment: true,
-          showSearchButton: false,
-          showSmallButton: true,
-          showStrikeThrough: true,
-          showUnderLineButton: true,
-          showRedo: true,
-          showUndo: true,
-          showClearFormat: true,
-        ),
       ),
     );
   }
@@ -193,7 +162,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     try {
       final viewModel = context.read<NotesViewModel>();
-      final content = jsonEncode(_controller.document.toJson());
+      final content = jsonEncode(_controller.document.toDelta().toJson());
       final title = _titleController.text.trim().isEmpty 
           ? '无标题笔记' 
           : _titleController.text.trim();

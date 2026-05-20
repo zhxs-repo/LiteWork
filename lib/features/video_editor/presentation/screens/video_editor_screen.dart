@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/video_editor_provider.dart';
-import '../../../../core/components/common_components.dart';
-import 'widgets/media_picker_panel.dart';
-import 'widgets/timeline_view.dart';
-import 'widgets/preview_player.dart';
-import 'widgets/editor_toolbar.dart';
+import 'package:litework/features/video_editor/presentation/providers/video_editor_provider.dart';
+import 'package:litework/features/video_editor/presentation/widgets/media_picker_panel.dart';
+import 'package:litework/features/video_editor/presentation/widgets/timeline_view.dart';
+import 'package:litework/features/video_editor/presentation/widgets/preview_player.dart';
+import 'package:litework/features/video_editor/presentation/widgets/editor_toolbar.dart';
 
 class VideoEditorScreen extends StatefulWidget {
   final String? projectId;
@@ -37,9 +36,8 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
         title: Text('视频剪辑'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.save),
+            icon: const Icon(Icons.save_alt),
             onPressed: () {
-              // 保存项目
               final provider = context.read<VideoEditorProvider>();
               provider.saveProject();
               ScaffoldMessenger.of(context).showSnackBar(
@@ -48,9 +46,8 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.export),
+            icon: const Icon(Icons.video_library),
             onPressed: () {
-              // 导出视频
               final provider = context.read<VideoEditorProvider>();
               provider.exportVideo();
               ScaffoldMessenger.of(context).showSnackBar(
@@ -63,7 +60,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
       body: Consumer<VideoEditorProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return LoadingIndicator();
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (provider.error != null) {
@@ -90,28 +87,24 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
 
           return Column(
             children: [
-              // 预览区域
               Expanded(
                 flex: 3,
-                child: PreviewPlayer(),
+                child: const PreviewPlayer(),
               ),
               
-              // 分隔线
-              Divider(height: 1),
+              const Divider(height: 1),
               
-              // 时间线区域
               Expanded(
                 flex: 2,
-                child: TimelineView(),
+                child: const TimelineView(),
               ),
               
-              // 工具栏
-              EditorToolbar(),
+              const EditorToolbar(),
             ],
           );
         },
       ),
-      bottomSheet: MediaPickerPanel(),
+      bottomSheet: const MediaPickerPanel(),
     );
   }
 }

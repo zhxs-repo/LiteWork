@@ -8,12 +8,14 @@ import '../data/datasources/trash_datasource.dart';
 /// 回收站项目模型
 class TrashItem {
   final String id;
-  final String type; // 'note' or 'folder'
+  final String title;
+  final String type;
   final Map<String, dynamic> data;
   final DateTime deletedAt;
 
   TrashItem({
     required this.id,
+    required this.title,
     required this.type,
     required this.data,
     required this.deletedAt,
@@ -23,11 +25,19 @@ class TrashItem {
     final data = entry.value;
     return TrashItem(
       id: entry.key,
+      title: data['data']?['title'] as String? ?? '未命名',
       type: data['type'] as String,
       data: data['data'] as Map<String, dynamic>,
       deletedAt: DateTime.parse(data['deletedAt'] as String),
     );
   }
+}
+=======
+    required this.title,
+    required this.type,
+    required this.deletedAt,
+  });
+>>>>>>> fe8f533 (feat: 添加多平台支持并修复代码错误)
 }
 
 /// 笔记管理 ViewModel
@@ -68,8 +78,10 @@ class NotesViewModel extends ChangeNotifier {
     
     try {
       await _dataSource.init();
+      await _trashDataSource.init();
       await loadNotes();
       await loadFolders();
+      await loadTrashItems();
       _isInitialized = true;
       _isLoading = false;
       notifyListeners();
@@ -294,7 +306,6 @@ class NotesViewModel extends ChangeNotifier {
       notifyListeners();
       
       try {
-        // 实现同步逻辑：调用数据源的同步方法
         await _dataSource.syncNote(noteId);
         _notes[index] = _notes[index].copyWith(isSynced: true, lastSyncedAt: DateTime.now());
         _isLoading = false;
@@ -309,6 +320,7 @@ class NotesViewModel extends ChangeNotifier {
   
   /// 加载回收站项目
   Future<void> loadTrashItems() async {
+<<<<<<< HEAD
     if (_isTrashInitialized) return;
     
     _isLoading = true;
@@ -324,11 +336,28 @@ class NotesViewModel extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
+=======
+    try {
+      final items = _trashDataSource.getAll();
+      _trashItems.clear();
+      for (final entry in items) {
+        final data = entry.value;
+        _trashItems.add(TrashItem(
+          id: data['id'] as String,
+          title: data['data']?['title'] as String? ?? '未命名',
+          type: data['type'] as String,
+          deletedAt: DateTime.parse(data['deletedAt'] as String),
+        ));
+      }
+      notifyListeners();
+    } catch (e) {
+>>>>>>> fe8f533 (feat: 添加多平台支持并修复代码错误)
       _error = '加载回收站失败：${e.toString()}';
       notifyListeners();
     }
   }
   
+<<<<<<< HEAD
   /// 从回收站恢复项目
   Future<void> restoreFromTrash(String itemId) async {
     _isLoading = true;
@@ -387,11 +416,66 @@ class NotesViewModel extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
+=======
+  /// 移动到回收站
+  Future<void> moveToTrash(Note note) async {
+    try {
+      await _trashDataSource.add(
+        note.id,
+        {
+          'id': note.id,
+          'title': note.title,
+          'content': note.content,
+          'type': note.type.index,
+          'tags': note.tags,
+          'folderId': note.folderId,
+          'createdAt': note.createdAt.toIso8601String(),
+          'updatedAt': note.updatedAt.toIso8601String(),
+        },
+        'note',
+      );
+      await _dataSource.deleteNote(note.id);
+      _notes.removeWhere((n) => n.id == note.id);
+      if (_currentNote?.id == note.id) {
+        _currentNote = null;
+      }
+      await loadTrashItems();
+      notifyListeners();
+    } catch (e) {
+      _error = '移动到回收站失败：${e.toString()}';
+      notifyListeners();
+    }
+  }
+  
+  /// 从回收站恢复
+  Future<void> restoreFromTrash(String itemId) async {
+    try {
+      final result = await _trashDataSource.restore(itemId);
+      if (result != null) {
+        final data = result['data'] as Map<String, dynamic>;
+        final restoredNote = Note(
+          id: data['id'] as String,
+          title: data['title'] as String,
+          content: data['content'] as String,
+          type: NoteType.values[data['type'] as int],
+          tags: List<String>.from(data['tags'] ?? []),
+          folderId: data['folderId'] as String?,
+          createdAt: DateTime.parse(data['createdAt'] as String),
+          updatedAt: DateTime.parse(data['updatedAt'] as String),
+        );
+        await _dataSource.saveNote(restoredNote);
+        _notes.insert(0, restoredNote);
+        await loadTrashItems();
+        notifyListeners();
+      }
+    } catch (e) {
+>>>>>>> fe8f533 (feat: 添加多平台支持并修复代码错误)
       _error = '恢复失败：${e.toString()}';
       notifyListeners();
     }
   }
   
+<<<<<<< HEAD
   /// 彻底删除回收站项目
   Future<void> deletePermanently(String itemId) async {
     _isLoading = true;
@@ -404,6 +488,15 @@ class NotesViewModel extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
+=======
+  /// 彻底删除
+  Future<void> deletePermanently(String itemId) async {
+    try {
+      await _trashDataSource.deletePermanently(itemId);
+      _trashItems.removeWhere((item) => item.id == itemId);
+      notifyListeners();
+    } catch (e) {
+>>>>>>> fe8f533 (feat: 添加多平台支持并修复代码错误)
       _error = '删除失败：${e.toString()}';
       notifyListeners();
     }
@@ -411,6 +504,7 @@ class NotesViewModel extends ChangeNotifier {
   
   /// 清空回收站
   Future<void> clearTrash() async {
+<<<<<<< HEAD
     _isLoading = true;
     notifyListeners();
     
@@ -421,6 +515,13 @@ class NotesViewModel extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
+=======
+    try {
+      await _trashDataSource.clear();
+      _trashItems.clear();
+      notifyListeners();
+    } catch (e) {
+>>>>>>> fe8f533 (feat: 添加多平台支持并修复代码错误)
       _error = '清空回收站失败：${e.toString()}';
       notifyListeners();
     }

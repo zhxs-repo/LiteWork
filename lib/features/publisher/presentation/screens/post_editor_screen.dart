@@ -16,7 +16,6 @@ class PostEditorScreen extends StatefulWidget {
 
 class _PostEditorScreenState extends State<PostEditorScreen> {
   late quill.QuillController _controller;
-  late quill.QuillToolbarConfig _toolbarConfig;
   bool _isInitialized = false;
   TextEditingController? _titleController;
 
@@ -205,42 +204,6 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
             // 工具栏
             quill.QuillSimpleToolbar(
               controller: _controller,
-              configurations: quill.QuillSimpleToolbarConfigurations(
-                toolbarConfiguration: quill.QuillToolbarConfiguration(
-                  multiRowsDisplay: true,
-                  showAlignmentButtons: true,
-                  showBackgroundColorButton: true,
-                  showBoldButton: true,
-                  showCenterAlignment: true,
-                  showClearFormat: true,
-                  showCodeBlock: false,
-                  showColorButton: true,
-                  showDividers: true,
-                  showDirection: false,
-                  showFontSize: true,
-                  showFontFamily: false,
-                  showHeaderStyle: false,
-                  showIndent: true,
-                  showInlineCode: false,
-                  showItalicButton: true,
-                  showJustifyAlignment: true,
-                  showLeftAlignment: true,
-                  showLink: true,
-                  showListBullets: true,
-                  showListCheck: true,
-                  showListNumbers: true,
-                  showQuote: true,
-                  showRedo: true,
-                  showRightAlignment: true,
-                  showSearchButton: false,
-                  showSmallButton: false,
-                  showStrikeThrough: true,
-                  showSubscript: false,
-                  showSuperscript: false,
-                  showUnderLineButton: true,
-                  showUndo: true,
-                ),
-              ),
             ),
             const Divider(height: 1),
             // 编辑区域
@@ -249,22 +212,8 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: quill.QuillEditor(
                   controller: _controller,
+                  focusNode: FocusNode(),
                   scrollController: ScrollController(),
-                  configurations: quill.QuillEditorConfigurations(
-                    placeholder: '开始写作...',
-                    autoFocus: true,
-                    expands: true,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    readOnly: false,
-                    scrollbarTheme: ScrollbarThemeData(),
-                    scrollable: true,
-                    customStyles: {
-                      BlockStyle.paragraph: const TextStyle(
-                        fontSize: 16,
-                        height: 1.6,
-                      ),
-                    },
-                  ),
                 ),
               ),
             ),

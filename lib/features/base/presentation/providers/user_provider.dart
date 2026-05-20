@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import '../models/user_model.dart';
-import '../domain/usecases/user_usecases.dart';
+import '../../data/models/user_model.dart';
+import '../../domain/usecases/user_usecases.dart';
 
 /// 用户状态枚举
 enum UserStatus {

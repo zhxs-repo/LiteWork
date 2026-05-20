@@ -18,6 +18,8 @@ class Note {
   final MindMapData? mindMapData;
   final bool isFavorite;
   final bool isSynced;
+  final bool isPinned;
+  final DateTime? lastSyncedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
   
@@ -31,6 +33,8 @@ class Note {
     this.mindMapData,
     this.isFavorite = false,
     this.isSynced = false,
+    this.isPinned = false,
+    this.lastSyncedAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -45,6 +49,8 @@ class Note {
     MindMapData? mindMapData,
     bool? isFavorite,
     bool? isSynced,
+    bool? isPinned,
+    DateTime? lastSyncedAt,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -58,6 +64,8 @@ class Note {
       mindMapData: mindMapData ?? this.mindMapData,
       isFavorite: isFavorite ?? this.isFavorite,
       isSynced: isSynced ?? this.isSynced,
+      isPinned: isPinned ?? this.isPinned,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -135,7 +143,7 @@ class NodeStyle {
   final String? backgroundColor;
   final String? textColor;
   final double? fontSize;
-  final FontWeight? fontWeight;
+  final int? fontWeightIndex;
   final String? borderColor;
   final double? borderWidth;
   
@@ -143,7 +151,7 @@ class NodeStyle {
     this.backgroundColor,
     this.textColor,
     this.fontSize,
-    this.fontWeight,
+    this.fontWeightIndex,
     this.borderColor,
     this.borderWidth,
   });
@@ -152,7 +160,7 @@ class NodeStyle {
     String? backgroundColor,
     String? textColor,
     double? fontSize,
-    FontWeight? fontWeight,
+    int? fontWeightIndex,
     String? borderColor,
     double? borderWidth,
   }) {
@@ -160,7 +168,7 @@ class NodeStyle {
       backgroundColor: backgroundColor ?? this.backgroundColor,
       textColor: textColor ?? this.textColor,
       fontSize: fontSize ?? this.fontSize,
-      fontWeight: fontWeight ?? this.fontWeight,
+      fontWeightIndex: fontWeightIndex ?? this.fontWeightIndex,
       borderColor: borderColor ?? this.borderColor,
       borderWidth: borderWidth ?? this.borderWidth,
     );
@@ -190,6 +198,8 @@ class NoteFolder {
     this.noteIds = const [],
     required this.createdAt,
   });
+  
+  int get noteCount => noteIds.length;
   
   NoteFolder copyWith({
     String? id,

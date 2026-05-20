@@ -206,6 +206,8 @@ class _VideoListScreenState extends State<VideoListScreen> {
     switch (status) {
       case ProjectStatus.draft:
         return Colors.blue;
+      case ProjectStatus.editing:
+        return Colors.teal;
       case ProjectStatus.rendering:
         return Colors.orange;
       case ProjectStatus.completed:
@@ -219,6 +221,8 @@ class _VideoListScreenState extends State<VideoListScreen> {
     switch (status) {
       case ProjectStatus.draft:
         return '草稿';
+      case ProjectStatus.editing:
+        return '编辑中';
       case ProjectStatus.rendering:
         return '渲染中';
       case ProjectStatus.completed:

@@ -1,4 +1,4 @@
-import '../domain/models.dart';
+import '../../data/models/timeline_clip_model.dart';
 
 /// 时间线编辑用例
 /// 负责处理时间线相关的业务逻辑，如片段排序、时长计算等
@@ -40,14 +40,36 @@ class TimelineEditUseCase {
     final clip = clips[index];
     if (splitPointMs <= 0 || splitPointMs >= clip.durationMs) return clips;
 
-    final firstHalf = clip.copyWith(
+    final firstHalf = TimelineClip(
+      id: clip.id,
+      projectId: clip.projectId,
+      mediaId: clip.mediaId,
+      trackIndex: clip.trackIndex,
+      startTimeMs: clip.startTimeMs,
+      endTimeMs: clip.startTimeMs + splitPointMs,
       durationMs: splitPointMs,
+      positionMs: clip.positionMs,
+      trimStartMs: clip.trimStartMs,
+      trimEndMs: clip.trimEndMs,
+      speed: clip.speed,
+      isReversed: clip.isReversed,
+      effects: clip.effects,
     );
 
-    final secondHalf = clip.copyWith(
+    final secondHalf = TimelineClip(
       id: '${clip.id}_split',
+      projectId: clip.projectId,
+      mediaId: clip.mediaId,
+      trackIndex: clip.trackIndex,
       startTimeMs: clip.startTimeMs + splitPointMs,
+      endTimeMs: clip.endTimeMs,
       durationMs: clip.durationMs - splitPointMs,
+      positionMs: clip.positionMs + splitPointMs,
+      trimStartMs: clip.trimStartMs,
+      trimEndMs: clip.trimEndMs,
+      speed: clip.speed,
+      isReversed: clip.isReversed,
+      effects: clip.effects,
     );
 
     final result = List<TimelineClip>.from(clips);

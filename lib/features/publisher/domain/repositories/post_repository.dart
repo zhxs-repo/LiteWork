@@ -1,4 +1,4 @@
-import '../models/post_document_model.dart';
+import '../../data/models/post_document_model.dart';
 
 /// 帖子仓库接口
 abstract class PostRepository {

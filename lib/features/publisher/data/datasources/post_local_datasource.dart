@@ -1,4 +1,4 @@
-import 'package:quill_delta/quill_delta.dart';
+import 'package:dart_quill_delta/dart_quill_delta.dart';
 import '../../../../core/storage/storage_manager.dart';
 import '../models/post_document_model.dart';
 
@@ -12,7 +12,7 @@ class PostLocalDataSource {
 
   /// 获取所有帖子
   Future<List<PostDocumentModel>> getAllPosts() async {
-    final postsJson = await _storageManager.get<List>(_postsKey);
+    final postsJson = _storageManager.get<List>(_postsKey);
     if (postsJson == null) return [];
     
     return (postsJson as List)

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import '../../../data/models/media_item_model.dart';
-import '../../../data/models/timeline_data_model.dart';
+import 'package:litework/features/video_editor/data/models/media_item_model.dart';
+import 'package:litework/features/video_editor/data/models/timeline_data_model.dart';
 
 /// 真实时间线画布组件
 /// 基于 CustomPainter 高性能渲染，支持多轨道、拖拽、缩放
@@ -132,7 +132,7 @@ class TimelinePainter extends CustomPainter {
       // 轨道背景
       canvas.drawRect(
         Rect.fromLTWH(0, yOffset, size.width, trackHeight),
-        Paint()..color = Colors.grey[850],
+        Paint()..color = Colors.grey[850]!,
       );
 
       // 绘制片段
@@ -180,9 +180,12 @@ class TimelinePainter extends CustomPainter {
 
   Color _getTrackColor(TrackType type) {
     switch (type) {
-      case TrackType.video: return Colors.teal;
-      case TrackType.audio: return Colors.orange;
-      case TrackType.text: return Colors.purple;
+      case TrackType.video:
+        return Colors.teal;
+      case TrackType.audio:
+        return Colors.orange;
+      case TrackType.text:
+        return Colors.purple;
     }
   }
 

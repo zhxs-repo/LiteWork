@@ -1,4 +1,4 @@
-import '../models/post_document_model.dart';
+import '../../data/models/post_document_model.dart';
 import '../repositories/post_repository.dart';
 
 /// 获取所有帖子用例

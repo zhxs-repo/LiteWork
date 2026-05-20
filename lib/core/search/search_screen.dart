@@ -44,16 +44,22 @@ class _SearchScreenState extends State<SearchScreen> {
         final jsonStr = _storageManager.getString(key);
         if (jsonStr != null) {
           try {
-            final note = NoteModel.fromJson(jsonStr);
-            if (note.title.contains(query) || note.content.contains(query)) {
-              results.add(SearchResult(
-                id: note.id,
-                title: note.title,
-                contentSnippet: note.content.substring(0, note.content.length.clamp(0, 50)),
-                type: 'note',
-                createdAt: note.createdAt,
-                updatedAt: note.updatedAt,
-              ));
+            final data = _storageManager.get<Map<String, dynamic>>(key);
+            if (data != null) {
+              final title = data['title'] as String? ?? '';
+              final content = data['content'] as String? ?? '';
+              if (title.contains(query) || content.contains(query)) {
+                results.add(SearchResult(
+                  id: data['id'] as String? ?? '',
+                  title: title,
+                  contentSnippet: content.length > 50 
+                      ? '${content.substring(0, 50)}...' 
+                      : content,
+                  type: 'note',
+                  createdAt: DateTime.tryParse(data['createdAt'] as String? ?? '') ?? DateTime.now(),
+                  updatedAt: DateTime.tryParse(data['updatedAt'] as String? ?? '') ?? DateTime.now(),
+                ));
+              }
             }
           } catch (e) {
             // 忽略解析错误

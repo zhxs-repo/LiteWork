@@ -9,11 +9,23 @@ class VideoProvider extends ChangeNotifier {
   
   List<domain.VideoProject> _projects = [];
   bool _isLoading = false;
+  bool _isExporting = false;
+  int _exportProgress = 0;
   String? _error;
+  String _resolution = '1080p';
+  String _frameRate = '30';
+  String _aspectRatio = '9:16';
 
   List<domain.VideoProject> get projects => _projects;
   bool get isLoading => _isLoading;
+  bool get isExporting => _isExporting;
+  int get exportProgress => _exportProgress;
   String? get error => _error;
+  String get resolution => _resolution;
+  String get frameRate => _frameRate;
+  String get aspectRatio => _aspectRatio;
+  String get estimatedSize => '~${(_resolution == '1080p' ? 150 : 80)}MB';
+  String get estimatedTime => '~2分钟';
 
   Future<void> init() async {
     await _dataSource.init();
@@ -76,10 +88,7 @@ class VideoProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      // 删除项目
       await _dataSource.deleteProject(id);
-      
-      // 刷新列表
       await loadProjects();
       
       _isLoading = false;
@@ -89,5 +98,44 @@ class VideoProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> startExport() async {
+    _isExporting = true;
+    _exportProgress = 0;
+    notifyListeners();
+    
+    try {
+      for (int i = 0; i <= 100; i += 10) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        _exportProgress = i;
+        notifyListeners();
+      }
+      _isExporting = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _isExporting = false;
+      notifyListeners();
+    }
+  }
+
+  void setResolution(String value) {
+    _resolution = value;
+    notifyListeners();
+  }
+
+  void setFrameRate(String value) {
+    _frameRate = value;
+    notifyListeners();
+  }
+
+  void setAspectRatio(String value) {
+    _aspectRatio = value;
+    notifyListeners();
+  }
+
+  void applyTemplate(String templateName) {
+    notifyListeners();
   }
 }

@@ -21,7 +21,9 @@ class TrashDataSource {
 
   /// 获取所有回收站项目
   List<MapEntry<String, Map>> getAll() {
-    return _box.entries.toList();
+    return _box.toMap().entries
+        .map((e) => MapEntry(e.key.toString(), e.value as Map))
+        .toList();
   }
 
   /// 还原项目（从回收站恢复）- 与 delete 逻辑区分

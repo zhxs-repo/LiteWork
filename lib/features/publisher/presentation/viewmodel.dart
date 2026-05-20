@@ -1,9 +1,39 @@
 /// 图文发布模块 - ViewModel (MVVM)
 
 import 'package:flutter/foundation.dart';
+import 'package:dart_quill_delta/dart_quill_delta.dart';
 import '../domain/models.dart';
+import '../data/models/post_document_model.dart';
 import '../domain/repositories/post_repository.dart';
 import '../domain/usecases/post_usecases.dart';
+
+PublishStatus _mapPostStatusToPublishStatus(PostStatus status) {
+  switch (status) {
+    case PostStatus.draft:
+      return PublishStatus.draft;
+    case PostStatus.published:
+      return PublishStatus.published;
+    case PostStatus.scheduled:
+      return PublishStatus.scheduled;
+    case PostStatus.archived:
+      return PublishStatus.failed;
+  }
+}
+
+PostStatus _mapPublishStatusToPostStatus(PublishStatus status) {
+  switch (status) {
+    case PublishStatus.draft:
+      return PostStatus.draft;
+    case PublishStatus.pending:
+      return PostStatus.draft;
+    case PublishStatus.published:
+      return PostStatus.published;
+    case PublishStatus.scheduled:
+      return PostStatus.scheduled;
+    case PublishStatus.failed:
+      return PostStatus.draft;
+  }
+}
 
 /// 图文发布 ViewModel
 class PublisherViewModel extends ChangeNotifier {
@@ -34,16 +64,14 @@ class PublisherViewModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      // 从数据层加载数据
       final posts = await _getAllPosts();
       _contents.clear();
       _contents.addAll(posts.map((post) => PublishContent(
         id: post.id,
         title: post.title,
-        content: post.content,
-        images: post.images,
-        status: post.status,
-        platforms: post.platforms,
+        content: '',
+        images: [],
+        status: _mapPostStatusToPublishStatus(post.status),
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
       )).toList());
@@ -62,16 +90,13 @@ class PublisherViewModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      // 保存到数据层
       final post = PostDocumentModel(
         id: content.id,
         title: content.title,
-        content: content.content,
-        images: content.images,
-        status: content.status,
-        platforms: content.platforms,
+        content: Delta(),
         createdAt: content.createdAt,
         updatedAt: content.updatedAt,
+        status: _mapPublishStatusToPostStatus(content.status),
       );
       await _savePost(post);
       _contents.insert(0, content);
@@ -90,16 +115,13 @@ class PublisherViewModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      // 更新数据层
       final post = PostDocumentModel(
         id: content.id,
         title: content.title,
-        content: content.content,
-        images: content.images,
-        status: content.status,
-        platforms: content.platforms,
+        content: Delta(),
         createdAt: content.createdAt,
         updatedAt: DateTime.now(),
+        status: _mapPublishStatusToPostStatus(content.status),
       );
       await _savePost(post);
       final index = _contents.indexWhere((c) => c.id == content.id);
@@ -121,7 +143,6 @@ class PublisherViewModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      // 从数据层删除
       await _deletePost(id);
       _contents.removeWhere((c) => c.id == id);
       _isLoading = false;
@@ -139,11 +160,9 @@ class PublisherViewModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      // 实现平台发布逻辑
       final content = _contents.firstWhere((c) => c.id == contentId);
       final updatedContent = content.copyWith(
-        status: PostStatus.published,
-        platforms: [...content.platforms, platform],
+        status: PublishStatus.published,
       );
       await updateContent(updatedContent);
       _isLoading = false;
