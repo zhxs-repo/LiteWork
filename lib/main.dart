@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'core/storage/storage_manager.dart';
+import 'core/services/theme_notifier.dart';
 import 'features/video_editor/presentation/viewmodel.dart';
 import 'features/video_editor/presentation/providers/video_editor_provider.dart';
 import 'features/video_editor/presentation/providers/video_provider.dart';
@@ -48,6 +49,10 @@ class LiteWorkApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        // 主题通知器
+        ChangeNotifierProvider(
+          create: (_) => ThemeNotifier()..load(),
+        ),
         // 用户 Provider (基础模块)
         ChangeNotifierProvider(
           create: (context) {
@@ -100,39 +105,53 @@ class LiteWorkApp extends StatelessWidget {
           create: (_) => NotesViewModel()..initialize(),
         ),
       ],
-      child: Builder(
-        builder: (context) {
-          // 检查是否已完成新手引导
-          final box = Hive.box('onboarding_box');
-          final hasCompletedOnboarding = box.get('completed', defaultValue: false);
-          
-          if (!hasCompletedOnboarding) {
-            // 首次启动，显示新手引导
-            return MaterialApp(
-              title: 'LiteWork',
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              themeMode: ThemeMode.system,
-              home: OnboardingScreen(
-                onComplete: () {
-                  box.put('completed', true);
-                },
-              ),
-            );
-          }
-          
-          // 已完成引导，显示主应用
-          return MaterialApp.router(
+      child: Consumer<ThemeNotifier>(
+        builder: (context, themeNotifier, _) {
+          return _AppContent(themeMode: themeNotifier.themeMode);
+        },
+      ),
+    );
+  }
+}
+
+class _AppContent extends StatelessWidget {
+  final ThemeMode themeMode;
+
+  const _AppContent({required this.themeMode});
+
+  @override
+  Widget build(BuildContext context) {
+    final box = Hive.box('onboarding_box');
+    return ValueListenableBuilder(
+      valueListenable: box.listenable(),
+      builder: (context, Box box, _) {
+        final hasCompletedOnboarding =
+            box.get('completed', defaultValue: false);
+
+        if (!hasCompletedOnboarding) {
+          return MaterialApp(
             title: 'LiteWork',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
-            themeMode: ThemeMode.system,
-            routerConfig: AppRouter.router,
+            themeMode: themeMode,
+            home: OnboardingScreen(
+              onComplete: () {
+                box.put('completed', true);
+              },
+            ),
           );
-        },
-      ),
+        }
+
+        return MaterialApp.router(
+          title: 'LiteWork',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeMode,
+          routerConfig: AppRouter.router,
+        );
+      },
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import '../../../core/storage/storage_manager.dart';
+import '../../../../core/storage/storage_manager.dart';
 
 /// 存储管理页面 - 查看存储空间和清理缓存
 class StorageManagementPage extends StatefulWidget {
