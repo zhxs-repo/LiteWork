@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 /// 工具函数集合
@@ -64,13 +65,11 @@ String generateUniqueId() {
 
 String _generateRandomString(int length) {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  final random = DateTime.now().microsecondsSinceEpoch;
-  // 修复：使用不同的种子值来确保每次生成不同的随机字符串
-  // 原代码每次都使用相同的 random 值，导致生成的字符串全是相同字符
+  final random = Random();
   return String.fromCharCodes(
     Iterable.generate(
       length,
-      (index) => chars.codeUnitAt((random + index) % chars.length),
+      (_) => chars.codeUnitAt(random.nextInt(chars.length)),
     ),
   );
 }

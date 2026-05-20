@@ -80,7 +80,7 @@ class EmptyState extends StatelessWidget {
 }
 
 /// 通用错误提示组件
-class ErrorWidget extends StatelessWidget {
+class AppErrorWidget extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
   

@@ -23,8 +23,10 @@ class SyncProvider extends ChangeNotifier {
     notifyListeners();
 
     Future.delayed(const Duration(seconds: 2), () {
-      _status = SyncStatus.idle;
-      notifyListeners();
+      if (hasListeners) {
+        _status = SyncStatus.idle;
+        notifyListeners();
+      }
     });
   }
 }

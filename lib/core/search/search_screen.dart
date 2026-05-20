@@ -274,6 +274,7 @@ class _SearchScreenState extends State<SearchScreen> {
     });
 
     Future.delayed(const Duration(milliseconds: 100), () {
+      if (!mounted) return;
       setState(() {
         _isSearching = false;
         if (query.isEmpty) {

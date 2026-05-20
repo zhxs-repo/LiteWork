@@ -31,6 +31,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
 
     if (widget.postId != null) {
       await provider.loadPost(widget.postId!);
+      if (!mounted) return;
       final post = provider.currentPost;
       if (post != null) {
         setState(() {
@@ -44,6 +45,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
       }
     } else {
       provider.createPost();
+      if (!mounted) return;
       setState(() {
         _titleController = TextEditingController(text: '新草稿');
         _isInitialized = true;
