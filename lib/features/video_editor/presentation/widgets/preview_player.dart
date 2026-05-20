@@ -113,8 +113,9 @@ class _PreviewPlayerState extends State<PreviewPlayer> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
-      color: Colors.black87,
+      color: cs.surface,
       child: GestureDetector(
         onTap: _togglePlay,
         child: _isInitialized && _chewieController != null
@@ -125,20 +126,18 @@ class _PreviewPlayerState extends State<PreviewPlayer> {
   }
 
   Widget _buildPlaceholder() {
-    return const Center(
+    final cs = Theme.of(context).colorScheme;
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.play_circle_outline, size: 64, color: Colors.white70),
-          SizedBox(height: 16),
-          Text(
-            '预览播放器',
-            style: TextStyle(color: Colors.white70),
-          ),
-          SizedBox(height: 8),
+          Icon(Icons.play_circle_outline, size: 64, color: cs.onSurfaceVariant),
+          const SizedBox(height: 16),
+          Text('预览播放器', style: TextStyle(color: cs.onSurfaceVariant)),
+          const SizedBox(height: 8),
           Text(
             '点击播放/暂停',
-            style: TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
           ),
         ],
       ),

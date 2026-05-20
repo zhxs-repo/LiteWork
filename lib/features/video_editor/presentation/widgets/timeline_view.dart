@@ -5,23 +5,17 @@ class TimelineView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
-      color: Colors.grey[900],
+      color: cs.surfaceContainerHighest,
       child: Column(
         children: [
           // 时间标尺
-          Container(
+          SizedBox(
             height: 30,
-            color: Colors.grey[800],
-            child: Row(
-              children: [
-                Expanded(
-                  child: CustomPaint(
-                    painter: _RulerPainter(),
-                    size: Size.infinite,
-                  ),
-                ),
-              ],
+            child: CustomPaint(
+              painter: _RulerPainter(textColor: cs.onSurfaceVariant),
+              size: Size.infinite,
             ),
           ),
           // 轨道区域
@@ -45,19 +39,15 @@ class TimelineView extends StatelessWidget {
 class _TrackRow extends StatelessWidget {
   final int trackIndex;
   final String trackName;
-
-  const _TrackRow({
-    Key? key,
-    required this.trackIndex,
-    required this.trackName,
-  }) : super(key: key);
+  const _TrackRow({required this.trackIndex, required this.trackName});
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       height: 60,
-      margin: EdgeInsets.symmetric(vertical: 2),
-      color: Colors.grey[850],
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      color: cs.surfaceContainerHigh,
       child: Stack(
         children: [
           Positioned(
@@ -68,7 +58,7 @@ class _TrackRow extends StatelessWidget {
             child: Center(
               child: Text(
                 trackName,
-                style: TextStyle(color: Colors.white70, fontSize: 12),
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
               ),
             ),
           ),
@@ -79,13 +69,13 @@ class _TrackRow extends StatelessWidget {
               width: 150,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.blue[700],
+                color: cs.primary,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Center(
                 child: Text(
                   '片段 ${trackIndex + 1}',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: cs.onPrimary),
                 ),
               ),
             ),
@@ -97,22 +87,26 @@ class _TrackRow extends StatelessWidget {
 }
 
 class _RulerPainter extends CustomPainter {
+  final Color textColor;
+  _RulerPainter({required this.textColor});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white54
+      ..color = textColor.withValues(alpha: 0.3)
       ..strokeWidth = 1;
 
-    final textPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-    );
+    final textPainter = TextPainter(textDirection: TextDirection.ltr);
 
     for (int i = 0; i < 20; i++) {
       final x = i * 50.0;
       canvas.drawLine(Offset(x, 0), Offset(x, 15), paint);
-      
+
       if (i % 5 == 0) {
-        textPainter.text = TextSpan(text: '${i}s', style: const TextStyle(color: Colors.white54, fontSize: 10));
+        textPainter.text = TextSpan(
+          text: '${i}s',
+          style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 10),
+        );
         textPainter.layout();
         textPainter.paint(canvas, Offset(x + 2, 18));
       }
@@ -120,5 +114,6 @@ class _RulerPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _RulerPainter oldDelegate) =>
+      oldDelegate.textColor != textColor;
 }

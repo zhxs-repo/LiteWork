@@ -5,9 +5,10 @@ class EditorToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       height: 60,
-      color: Colors.grey[850],
+      color: cs.surfaceContainerHighest,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -28,14 +29,11 @@ class _ToolbarButton extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _ToolbarButton({
-    Key? key,
-    required this.icon,
-    required this.label,
-  }) : super(key: key);
+  const _ToolbarButton({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return InkWell(
       onTap: () {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -45,11 +43,11 @@ class _ToolbarButton extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: Colors.white70, size: 24),
-          SizedBox(height: 4),
+          Icon(icon, color: cs.onSurface, size: 24),
+          const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(color: Colors.white70, fontSize: 10),
+            style: TextStyle(color: cs.onSurface, fontSize: 10),
           ),
         ],
       ),
