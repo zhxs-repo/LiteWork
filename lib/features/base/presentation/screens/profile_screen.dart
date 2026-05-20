@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../widgets/user_info_widget.dart';
+import 'theme_settings_page.dart';
+import 'storage_management_page.dart';
 
 /// 个人中心页面
 class ProfilePage extends StatelessWidget {
@@ -61,13 +63,19 @@ class ProfilePage extends StatelessWidget {
                 _buildListTile(
                   icon: Icons.palette_outlined,
                   title: '主题设置',
-                  onTap: () => _navigateToSettings(context, '主题设置'),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ThemeSettingsPage()),
+                  ),
                 ),
                 _buildListTile(
                   icon: Icons.storage_outlined,
                   title: '存储管理',
                   subtitle: '清理缓存',
-                  onTap: () => _navigateToSettings(context, '存储管理'),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const StorageManagementPage()),
+                  ),
                 ),
                 _buildListTile(
                   icon: Icons.info_outline,
@@ -134,12 +142,6 @@ class ProfilePage extends StatelessWidget {
       subtitle: subtitle != null ? Text(subtitle) : null,
       trailing: trailing ?? const Icon(Icons.chevron_right),
       onTap: onTap,
-    );
-  }
-
-  void _navigateToSettings(BuildContext context, String title) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('即将进入 $title')),
     );
   }
 

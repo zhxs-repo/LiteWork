@@ -82,6 +82,23 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           onChanged: (value) => _title = value,
         ),
         actions: [
+          // 撤销按钮
+          IconButton(
+            icon: const Icon(Icons.undo),
+            onPressed: () {
+              if (_controller.document.isEmpty) return;
+              _controller.undo();
+            },
+            tooltip: '撤销',
+          ),
+          // 重做按钮
+          IconButton(
+            icon: const Icon(Icons.redo),
+            onPressed: () {
+              _controller.redo();
+            },
+            tooltip: '重做',
+          ),
           IconButton(
             icon: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.save),
             onPressed: _isSaving ? null : _saveNote,
