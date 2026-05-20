@@ -17,6 +17,7 @@ import 'features/publisher/data/datasources/post_local_datasource.dart';
 import 'features/publisher/data/repositories/post_repository_impl.dart';
 import 'features/publisher/domain/usecases/post_usecases.dart';
 import 'features/publisher/presentation/providers/post_provider.dart';
+import 'screens/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +32,7 @@ void main() async {
     Hive.openBox('video_projects_box'),
     Hive.openBox('trash_box'),
     Hive.openBox('folders_box'),
+    Hive.openBox('onboarding_box'),
   ]);
 
   // 初始化本地存储
@@ -98,13 +100,38 @@ class LiteWorkApp extends StatelessWidget {
           create: (_) => NotesViewModel()..initialize(),
         ),
       ],
-      child: MaterialApp.router(
-        title: 'LiteWork',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        routerConfig: AppRouter.router,
+      child: Builder(
+        builder: (context) {
+          // 检查是否已完成新手引导
+          final box = Hive.box('onboarding_box');
+          final hasCompletedOnboarding = box.get('completed', defaultValue: false);
+          
+          if (!hasCompletedOnboarding) {
+            // 首次启动，显示新手引导
+            return MaterialApp(
+              title: 'LiteWork',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: ThemeMode.system,
+              home: OnboardingScreen(
+                onComplete: () {
+                  box.put('completed', true);
+                },
+              ),
+            );
+          }
+          
+          // 已完成引导，显示主应用
+          return MaterialApp.router(
+            title: 'LiteWork',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.system,
+            routerConfig: AppRouter.router,
+          );
+        },
       ),
     );
   }
