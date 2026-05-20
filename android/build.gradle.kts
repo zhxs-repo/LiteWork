@@ -2,6 +2,8 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://github.com/jitsi/jitsi-maven-repository/raw/master/releases") }
+        maven { url = uri("https://raw.githubusercontent.com/arthenica/ffmpeg-kit/master/maven/") }
     }
 }
 

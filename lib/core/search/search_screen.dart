@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../core/storage/storage_manager.dart';
+import '../../../core/router/app_router.dart';
 import '../../../features/notes/domain/models.dart';
 import '../../../features/video_editor/domain/models.dart' as video;
 import 'search_result_model.dart';
@@ -137,15 +139,15 @@ class _SearchScreenState extends State<SearchScreen> {
     switch (result.type) {
       case 'note':
         // 跳转到笔记详情页
-        Navigator.pushNamed(context, '/notes/${result.id}');
+        context.pushNamed('noteDetail', pathParameters: {'id': result.id});
         break;
       case 'post':
         // 跳转到图文编辑页
-        Navigator.pushNamed(context, '/post/editor', arguments: {'id': result.id});
+        context.pushNamed('postEditor', queryParameters: {'id': result.id});
         break;
       case 'video_project':
         // 跳转到视频编辑器
-        Navigator.pushNamed(context, '/video-editor', arguments: {'projectId': result.id});
+        context.push(AppRoutes.videoEditor);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(

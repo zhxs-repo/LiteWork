@@ -86,7 +86,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           IconButton(
             icon: const Icon(Icons.undo),
             onPressed: () {
-              if (_controller.document.isEmpty) return;
+              if (_controller.document.isEmpty()) return;
               _controller.undo();
             },
             tooltip: '撤销',

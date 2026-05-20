@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../viewmodel.dart';
 import '../../domain/models.dart';
+import '../../../../core/router/app_router.dart';
 
 /// 视频项目列表页
 class VideoListScreen extends StatefulWidget {
@@ -174,11 +176,14 @@ class _VideoListScreenState extends State<VideoListScreen> {
                           ),
                         ),
                         const Spacer(),
-                        Text(
-                          _formatDate(project.updatedAt),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[500],
+                        Flexible(
+                          child: Text(
+                            _formatDate(project.updatedAt),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -284,8 +289,7 @@ class _VideoListScreenState extends State<VideoListScreen> {
   void _openProject(BuildContext context, String projectId) {
     final viewModel = context.read<VideoEditorViewModel>();
     viewModel.openProject(projectId);
-    // 导航到编辑器页面
-    Navigator.pushNamed(context, '/video-editor', arguments: projectId);
+    context.push(AppRoutes.videoEditor);
   }
 
   void _handleMenuAction(BuildContext context, VideoProject project, String action, VideoEditorViewModel viewModel) {

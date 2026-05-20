@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/post_provider.dart';
 import '../../data/models/post_document_model.dart';
@@ -17,7 +18,7 @@ class PostListScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: '新建草稿',
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.postEditor),
+            onPressed: () => context.pushNamed('postEditor'),
           ),
         ],
       ),
@@ -33,7 +34,7 @@ class PostListScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, AppRoutes.postEditor),
+        onPressed: () => context.pushNamed('postEditor'),
         icon: const Icon(Icons.add),
         label: const Text('新建草稿'),
       ),
@@ -122,7 +123,7 @@ class _DraftCard extends StatelessWidget {
   }
 
   void _navigateToEditor(BuildContext context) {
-    Navigator.pushNamed(context, AppRoutes.postEditor, arguments: post.id);
+    context.pushNamed('postEditor', queryParameters: {'id': post.id});
   }
 
   Future<void> _confirmDelete(BuildContext context) async {

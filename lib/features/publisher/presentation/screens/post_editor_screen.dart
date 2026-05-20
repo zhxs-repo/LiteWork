@@ -27,7 +27,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
     _controller = quill.QuillController.basic();
     _editorFocusNode = FocusNode();
     _editorScrollController = ScrollController();
-    _initEditor();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initEditor());
   }
 
   Future<void> _initEditor() async {

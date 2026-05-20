@@ -191,7 +191,7 @@ class VideoEditorViewModel extends ChangeNotifier {
     
     // 构建 FFmpeg 命令
     // 示例：concat 多个视频片段并应用效果
-    final StringBuilder ffmpegCommand = StringBuilder();
+    final StringBuffer ffmpegCommand = StringBuffer();
     
     // 1. 生成输入文件列表
     final inputFiles = <String>[];
@@ -212,20 +212,32 @@ class VideoEditorViewModel extends ChangeNotifier {
       // 应用效果
       for (var effect in clip.effects) {
         switch (effect.type) {
-          case EffectType.blur:
-            filterChain += ',boxblur=${effect.intensity}';
+          case EffectType.filter:
+            final filterType = effect.parameters['filterType'] ?? 'none';
+            final intensity = effect.parameters['intensity'] ?? 1.0;
+            switch (filterType) {
+              case 'blur':
+                filterChain += ',boxblur=$intensity';
+                break;
+              case 'grayscale':
+                filterChain += ',hue=s=0';
+                break;
+              case 'brightness':
+                filterChain += ',eq=brightness=$intensity';
+                break;
+              case 'contrast':
+                filterChain += ',eq=contrast=$intensity';
+                break;
+              case 'saturation':
+                filterChain += ',eq=saturation=$intensity';
+                break;
+            }
             break;
-          case EffectType.grayscale:
-            filterChain += ',hue=s=0';
-            break;
-          case EffectType.brightness:
-            filterChain += ',brightness=${effect.intensity}';
-            break;
-          case EffectType.contrast:
-            filterChain += ',contrast=${effect.intensity}';
-            break;
-          case EffectType.saturation:
-            filterChain += ',saturation=${effect.intensity}';
+          case EffectType.text:
+          case EffectType.sticker:
+          case EffectType.transition:
+          case EffectType.audio:
+          case EffectType.speed:
             break;
         }
       }
