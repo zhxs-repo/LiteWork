@@ -4,8 +4,8 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.5.0
-  flutter: ^3.24.0
+  sdk: ^3.11.0
+  flutter: ^3.41.0
 
 dependencies:
   flutter:
@@ -36,7 +36,7 @@ dependencies:
   ffmpeg_kit_flutter: ^6.0.3
   path_provider: ^2.1.4
   gallery_saver: ^2.3.2
-  camera: ^0.11.0
+  camera: ^0.12.0+1
   
   # 网络与数据同步
   dio: ^5.7.0
