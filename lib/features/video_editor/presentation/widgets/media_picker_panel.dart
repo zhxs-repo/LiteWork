@@ -5,51 +5,40 @@ class MediaPickerPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       height: 120,
-      color: Colors.grey[900],
+      color: cs.surfaceContainerHighest,
       child: Column(
         children: [
-          // 标题栏
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   '素材库',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 TextButton(
-                  onPressed: () async {
-                    // 打开系统相册选择器
-                    // 注意：实际项目中需要添加 image_picker 依赖
-                    // final picker = ImagePicker();
-                    // final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-                    // if (pickedFile != null) {
-                    //   viewModel.addMedia(pickedFile.path);
-                    // }
-                    
+                  onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('请选择要导入的图片或视频')),
                     );
                   },
-                  child: const Text(
-                    '+ 导入',
-                    style: TextStyle(color: Colors.blue),
-                  ),
+                  child: Text('+ 导入', style: TextStyle(color: cs.primary)),
                 ),
               ],
             ),
           ),
-          // 素材列表
           Expanded(
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: 5,
-              itemBuilder: (context, index) {
-                return _MediaThumbnail(index: index);
-              },
+              itemBuilder: (context, index) => _MediaThumbnail(index: index),
             ),
           ),
         ],
@@ -60,16 +49,16 @@ class MediaPickerPanel extends StatelessWidget {
 
 class _MediaThumbnail extends StatelessWidget {
   final int index;
-
-  const _MediaThumbnail({Key? key, required this.index}) : super(key: key);
+  const _MediaThumbnail({required this.index});
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       width: 100,
-      margin: EdgeInsets.symmetric(horizontal: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.grey[800],
+        color: cs.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Stack(
@@ -77,11 +66,15 @@ class _MediaThumbnail extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Container(
-              color: Colors.blueGrey[300 + (index * 50) % 400],
-              child: Icon(
-                index % 3 == 0 ? Icons.video_library : (index % 3 == 1 ? Icons.image : Icons.music_note),
-                size: 40,
-                color: Colors.white70,
+              color: cs.primaryContainer,
+              child: Center(
+                child: Icon(
+                  index % 3 == 0
+                      ? Icons.video_library
+                      : (index % 3 == 1 ? Icons.image : Icons.music_note),
+                  size: 40,
+                  color: cs.onPrimaryContainer,
+                ),
               ),
             ),
           ),
@@ -89,14 +82,14 @@ class _MediaThumbnail extends StatelessWidget {
             right: 4,
             bottom: 4,
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.black54,
+                color: cs.surface.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 '00:${10 + index}',
-                style: TextStyle(color: Colors.white, fontSize: 10),
+                style: TextStyle(color: cs.onSurface, fontSize: 10),
               ),
             ),
           ),

@@ -18,11 +18,15 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   late quill.QuillController _controller;
   bool _isInitialized = false;
   TextEditingController? _titleController;
+  late final FocusNode _editorFocusNode;
+  late final ScrollController _editorScrollController;
 
   @override
   void initState() {
     super.initState();
     _controller = quill.QuillController.basic();
+    _editorFocusNode = FocusNode();
+    _editorScrollController = ScrollController();
     _initEditor();
   }
 
@@ -57,195 +61,204 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   void dispose() {
     _controller.dispose();
     _titleController?.dispose();
+    _editorFocusNode.dispose();
+    _editorScrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: context.read<PostProvider>(),
-      child: Scaffold(
-        appBar: AppBar(
-          title: Consumer<PostProvider>(
-            builder: (context, provider, _) {
-              return TextField(
-                decoration: const InputDecoration(
-                  hintText: '输入标题...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.grey),
-                ),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-                controller: _titleController ?? TextEditingController(),
-                onChanged: (value) {
-                  provider.updateTitle(value);
-                },
-              );
-            },
-          ),
-          actions: [
-            Consumer<PostProvider>(
-              builder: (context, provider, _) {
-                return Row(
-                  children: [
-                    // 保存状态指示器
-                    if (provider.state == EditorState.saving)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 8.0),
-                        child: SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-                          ),
-                        ),
-                      ),
-                    if (provider.state == EditorState.saved)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 8.0),
-                        child: Icon(
-                          Icons.check_circle,
-                          color: Colors.greenAccent,
-                          size: 20,
-                        ),
-                      ),
-                    // 发布按钮
-                    IconButton(
-                      icon: const Icon(Icons.publish),
-                      tooltip: '发布',
-                      onPressed: () async {
-                        await provider.autoSave();
-                        await provider.publishPost();
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('发布成功！')),
-                          );
-                        }
-                      },
-                    ),
-                    // 更多选项
-                    PopupMenuButton<String>(
-                      onSelected: (value) async {
-                        switch (value) {
-                          case 'save':
-                            await provider.autoSave();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('已保存到草稿箱')),
-                              );
-                            }
-                            break;
-                          case 'delete':
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('确认删除'),
-                                content: const Text('确定要删除这篇草稿吗？'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, false),
-                                    child: const Text('取消'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, true),
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: Colors.red,
-                                    ),
-                                    child: const Text('删除'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (confirm == true && provider.currentPost != null) {
-                              await provider.deletePost(provider.currentPost!.id);
-                              if (mounted) {
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('已删除')),
-                                );
-                              }
-                            }
-                            break;
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'save',
-                          child: Row(
-                            children: [
-                              Icon(Icons.save),
-                              SizedBox(width: 8),
-                              Text('保存草稿'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('删除', style: TextStyle(color: Colors.red)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
+    return Scaffold(
+      appBar: _buildAppBar(),
+      body: _buildBody(),
+      bottomNavigationBar: _buildBottomBar(),
+    );
+  }
+
+  // ─── AppBar ──────────────────────────────────────────────────────────
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: Consumer<PostProvider>(
+        builder: (context, provider, _) {
+          return TextField(
+            decoration: const InputDecoration(
+              hintText: '输入标题...',
+              border: InputBorder.none,
+              hintStyle: TextStyle(color: Colors.grey),
             ),
-          ],
-        ),
-        body: Column(
-          children: [
-            // 工具栏
-            quill.QuillSimpleToolbar(
-              controller: _controller,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
-            const Divider(height: 1),
-            // 编辑区域
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: quill.QuillEditor(
-                  controller: _controller,
-                  focusNode: FocusNode(),
-                  scrollController: ScrollController(),
-                ),
-              ),
-            ),
-          ],
-        ),
-        // 自动保存监听
-        bottomNavigationBar: Consumer<PostProvider>(
+            controller: _titleController ?? TextEditingController(),
+            onChanged: provider.updateTitle,
+          );
+        },
+      ),
+      actions: [
+        Consumer<PostProvider>(
           builder: (context, provider, _) {
-            // 监听内容变化自动保存（简单实现：3 秒防抖）
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: AppTheme.surfaceColor,
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Text(
-                    '自动保存开启中',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '最后更新：${_formatTime(DateTime.now())}',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  ),
-                ],
-              ),
+            return Row(
+              children: [
+                _buildSaveIndicator(provider),
+                _buildPublishButton(provider),
+                _buildMoreMenu(provider),
+              ],
             );
           },
         ),
+      ],
+    );
+  }
+
+  Widget _buildSaveIndicator(PostProvider provider) {
+    if (provider.state == EditorState.saving) {
+      return const Padding(
+        padding: EdgeInsets.only(right: 8.0),
+        child: SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    if (provider.state == EditorState.saved) {
+      return const Padding(
+        padding: EdgeInsets.only(right: 8.0),
+        child: Icon(Icons.check_circle, color: Colors.greenAccent, size: 20),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildPublishButton(PostProvider provider) {
+    return IconButton(
+      icon: const Icon(Icons.publish),
+      tooltip: '发布',
+      onPressed: () async {
+        await provider.autoSave();
+        await provider.publishPost();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('发布成功！')),
+          );
+        }
+      },
+    );
+  }
+
+  Widget _buildMoreMenu(PostProvider provider) {
+    return PopupMenuButton<String>(
+      onSelected: (value) => _handleMenuAction(value, provider),
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'save',
+          child: Row(
+            children: [
+              Icon(Icons.save),
+              SizedBox(width: 8),
+              Text('保存草稿'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete, color: Colors.red),
+              SizedBox(width: 8),
+              Text('删除', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleMenuAction(String value, PostProvider provider) async {
+    switch (value) {
+      case 'save':
+        await provider.autoSave();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已保存到草稿箱')),
+          );
+        }
+        break;
+      case 'delete':
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('确认删除'),
+            content: const Text('确定要删除这篇草稿吗？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('删除'),
+              ),
+            ],
+          ),
+        );
+        if (confirm == true && provider.currentPost != null) {
+          await provider.deletePost(provider.currentPost!.id);
+          if (mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('已删除')),
+            );
+          }
+        }
+        break;
+    }
+  }
+
+  // ─── Body ────────────────────────────────────────────────────────────
+
+  Widget _buildBody() {
+    return Column(
+      children: [
+        quill.QuillSimpleToolbar(controller: _controller),
+        const Divider(height: 1),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: quill.QuillEditor(
+              controller: _controller,
+              focusNode: _editorFocusNode,
+              scrollController: _editorScrollController,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Bottom Bar ──────────────────────────────────────────────────────
+
+  Widget _buildBottomBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: AppTheme.surfaceColor,
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, size: 16, color: Colors.grey),
+          const SizedBox(width: 8),
+          Text(
+            '自动保存开启中',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
+          const Spacer(),
+          Text(
+            '最后更新：${_formatTime(DateTime.now())}',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
+        ],
       ),
     );
   }

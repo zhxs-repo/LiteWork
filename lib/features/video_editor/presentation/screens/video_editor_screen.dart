@@ -9,7 +9,7 @@ import 'package:litework/features/video_editor/presentation/widgets/editor_toolb
 class VideoEditorScreen extends StatefulWidget {
   final String? projectId;
 
-  const VideoEditorScreen({Key? key, this.projectId}) : super(key: key);
+  const VideoEditorScreen({super.key, this.projectId});
 
   @override
   State<VideoEditorScreen> createState() => _VideoEditorScreenState();
@@ -33,78 +33,82 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('视频剪辑'),
+        title: const Text('视频剪辑'),
         actions: [
           IconButton(
             icon: const Icon(Icons.save_alt),
-            onPressed: () {
-              final provider = context.read<VideoEditorProvider>();
-              provider.saveProject();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('项目已保存')),
-              );
-            },
+            onPressed: _saveProject,
           ),
           IconButton(
             icon: const Icon(Icons.video_library),
-            onPressed: () {
-              final provider = context.read<VideoEditorProvider>();
-              provider.exportVideo();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('正在导出视频，请稍候...')),
-              );
-            },
+            onPressed: _exportVideo,
           ),
         ],
       ),
       body: Consumer<VideoEditorProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (provider.error != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  SizedBox(height: 16),
-                  Text('发生错误：${provider.error}'),
-                  SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => provider.clearError(),
-                    child: Text('重试'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (provider.currentProject == null) {
-            return Center(child: Text('未找到项目'));
-          }
-
-          return Column(
-            children: [
-              Expanded(
-                flex: 3,
-                child: const PreviewPlayer(),
-              ),
-              
-              const Divider(height: 1),
-              
-              Expanded(
-                flex: 2,
-                child: const TimelineView(),
-              ),
-              
-              const EditorToolbar(),
-            ],
-          );
-        },
+        builder: (context, provider, _) => _buildBody(provider),
       ),
       bottomSheet: const MediaPickerPanel(),
+    );
+  }
+
+  Widget _buildBody(VideoEditorProvider provider) {
+    if (provider.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (provider.error != null) {
+      return _ErrorView(
+        message: provider.error!,
+        onRetry: provider.clearError,
+      );
+    }
+    if (provider.currentProject == null) {
+      return const Center(child: Text('未找到项目'));
+    }
+    return const Column(
+      children: [
+        Expanded(flex: 3, child: PreviewPlayer()),
+        Divider(height: 1),
+        Expanded(flex: 2, child: TimelineView()),
+        EditorToolbar(),
+      ],
+    );
+  }
+
+  void _saveProject() {
+    context.read<VideoEditorProvider>().saveProject();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('项目已保存')),
+    );
+  }
+
+  void _exportVideo() {
+    context.read<VideoEditorProvider>().exportVideo();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('正在导出视频，请稍候...')),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _ErrorView({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 48, color: cs.error),
+          const SizedBox(height: 16),
+          Text('发生错误：$message'),
+          const SizedBox(height: 16),
+          ElevatedButton(onPressed: onRetry, child: const Text('重试')),
+        ],
+      ),
     );
   }
 }
