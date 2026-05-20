@@ -136,9 +136,9 @@ class PostProvider extends ChangeNotifier {
       _state = EditorState.saved;
       notifyListeners();
 
-      // 重置状态
+      // 重置状态（使用 addPostFrameCallback 避免 dispose 后调用）
       Future.delayed(const Duration(seconds: 1), () {
-        if (_state == EditorState.saved) {
+        if (hasListeners && _state == EditorState.saved) {
           _state = EditorState.idle;
           notifyListeners();
         }

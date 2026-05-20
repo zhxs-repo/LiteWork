@@ -114,10 +114,16 @@ class StorageManager {
     return await _prefs!.remove(key);
   }
   
-  /// 清空所有数据
+  /// 清空本应用的所有数据（不影响第三方插件数据）
   Future<bool> clear() async {
     await _ensureInit();
-    return await _prefs!.clear();
+    final appKeys = _prefs!.getKeys().where(
+      (key) => StorageKeys.allKeys.contains(key),
+    );
+    for (final key in appKeys) {
+      await _prefs!.remove(key);
+    }
+    return true;
   }
   
   /// 检查是否包含某个键
@@ -147,30 +153,46 @@ class StorageManager {
 class StorageKeys {
   // 主题相关
   static const String isDarkMode = 'is_dark_mode';
-  
+
   // 用户相关
   static const String userId = 'user_id';
   static const String userName = 'user_name';
   static const String userToken = 'user_token';
-  
+
   // 设置相关
   static const String autoSaveEnabled = 'auto_save_enabled';
   static const String syncEnabled = 'sync_enabled';
-  
+
   // 最近使用
   static const String recentProjects = 'recent_projects';
   static const String recentNotes = 'recent_notes';
-  
+
   // 数据列表
   static const String postsList = 'posts_list';
   static const String notesList = 'notes_list';
   static const String videoProjectsList = 'video_projects_list';
   static const String foldersList = 'folders_list';
-  
+
   // Hive Box 名称
   static const String postsBox = 'posts_box';
   static const String notesBox = 'notes_box';
   static const String videoProjectsBox = 'video_projects_box';
   static const String trashBox = 'trash_box';
   static const String foldersBox = 'folders_box';
+
+  /// 所有应用级 key（用于安全清除）
+  static const Set<String> allKeys = {
+    isDarkMode,
+    userId,
+    userName,
+    userToken,
+    autoSaveEnabled,
+    syncEnabled,
+    recentProjects,
+    recentNotes,
+    postsList,
+    notesList,
+    videoProjectsList,
+    foldersList,
+  };
 }
