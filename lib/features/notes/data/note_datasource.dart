@@ -9,8 +9,8 @@ class NotesDataSource {
 
   /// 初始化数据源
   Future<void> init() async {
-    _notesBox = await Hive.openBox<Map>(StorageKeys.notesBox);
-    _foldersBox = await Hive.openBox<Map>(StorageKeys.foldersBox);
+    _notesBox = Hive.box<Map>(StorageKeys.notesBox);
+    _foldersBox = Hive.box<Map>(StorageKeys.foldersBox);
   }
 
   // ==================== 笔记操作 ====================

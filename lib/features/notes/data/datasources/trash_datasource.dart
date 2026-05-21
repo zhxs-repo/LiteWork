@@ -6,7 +6,7 @@ class TrashDataSource {
   late Box<Map> _box;
 
   Future<void> init() async {
-    _box = await Hive.openBox<Map>(_boxName);
+    _box = Hive.box<Map>(_boxName);
   }
 
   /// 添加到回收站
