@@ -289,7 +289,7 @@ class _VideoListScreenState extends State<VideoListScreen> {
   void _openProject(BuildContext context, String projectId) {
     final viewModel = context.read<VideoEditorViewModel>();
     viewModel.openProject(projectId);
-    context.push(AppRoutes.videoEditor);
+    context.push(AppRoutes.videoEditorEdit, params: {'id': projectId});
   }
 
   void _handleMenuAction(BuildContext context, VideoProject project, String action, VideoEditorViewModel viewModel) {

@@ -12,6 +12,7 @@ import '../../features/notes/presentation/viewmodel.dart';
 import '../../features/notes/domain/models.dart';
 import '../search/search_screen.dart';
 import '../../features/video_editor/presentation/screens/video_list_screen.dart';
+import '../../features/video_editor/presentation/screens/video_editor_screen.dart';
 
 /// 路由路径常量
 class AppRoutes {
@@ -21,6 +22,7 @@ class AppRoutes {
   static const String postEditor = '/post/editor';
   static const String videoEditor = '/video-editor';
   static const String videoEditorCreate = '/video-editor/create';
+  static const String videoEditorEdit = '/video-editor/edit/:id';
   static const String notes = '/notes';
   static const String notesCreate = '/notes/create';
   static const String notesEdit = '/notes/edit';
@@ -101,6 +103,14 @@ class AppRouter {
                 path: 'create',
                 name: 'videoEditorCreate',
                 builder: (context, state) => const VideoEditorCreatePage(),
+              ),
+              GoRoute(
+                path: 'edit/:id',
+                name: 'videoEditorEdit',
+                builder: (context, state) {
+                  final projectId = state.pathParameters['id'] ?? '';
+                  return VideoEditorScreen(projectId: projectId);
+                },
               ),
             ],
           ),
