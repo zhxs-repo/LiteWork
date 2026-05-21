@@ -1,4 +1,8 @@
+import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../viewmodel.dart';
 import '../../domain/models.dart';
@@ -19,6 +23,7 @@ class MindMapEditorScreen extends StatefulWidget {
 }
 
 class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
+  final GlobalKey _repaintKey = GlobalKey();
   MindMapData? _mindMapData;
   String _title = '思维导图';
   bool _isSaving = false;
@@ -115,17 +120,20 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
       ),
       body: _mindMapData == null
           ? const Center(child: CircularProgressIndicator())
-          : GestureDetector(
-              onPanUpdate: (details) {
-                // 画布拖拽逻辑可以在这里实现
-              },
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: MindMapPainter(
-                  mindMapData: _mindMapData!,
-                  selectedNodeId: _selectedNodeId,
-                  onNodeTap: _onNodeTap,
-                  onNodeDoubleTap: _onNodeDoubleTap,
+          : RepaintBoundary(
+              key: _repaintKey,
+              child: GestureDetector(
+                onPanUpdate: (details) {
+                  // 画布拖拽逻辑可以在这里实现
+                },
+                child: CustomPaint(
+                  size: Size.infinite,
+                  painter: MindMapPainter(
+                    mindMapData: _mindMapData!,
+                    selectedNodeId: _selectedNodeId,
+                    onNodeTap: _onNodeTap,
+                    onNodeDoubleTap: _onNodeDoubleTap,
+                  ),
                 ),
               ),
             ),
@@ -464,10 +472,38 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
     }
   }
 
-  void _exportMindMap() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('导出功能开发中...')),
-    );
+  void _exportMindMap() async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('正在导出思维导图...')),
+      );
+
+      // 使用 RepaintBoundary 捕获思维导图为图片
+      final RenderRepaintBoundary boundary = _repaintKey.currentContext!
+          .findRenderObject() as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final pngBytes = byteData!.buffer.asUint8List();
+
+      // 保存到应用目录
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath =
+          '${directory.path}/mindmap_${DateTime.now().millisecondsSinceEpoch}.png';
+      final file = File(filePath);
+      await file.writeAsBytes(pngBytes);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已导出到：$filePath')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导出失败：$e')),
+        );
+      }
+    }
   }
 }
 

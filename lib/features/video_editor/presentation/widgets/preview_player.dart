@@ -58,10 +58,6 @@ class _PreviewPlayerState extends State<PreviewPlayer> {
         allowFullScreen: false,
         allowMuting: true,
         placeholder: Container(color: Colors.black),
-        deviceOrientationsAfterEnterFullScreen: [
-          DeviceOrientation.portraitUp,
-          DeviceOrientation.portraitDown,
-        ],
       );
 
       _videoController!.addListener(() {

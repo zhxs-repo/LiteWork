@@ -147,6 +147,16 @@ class StorageManager {
   Future<bool> saveData<T>(String key, T value) async {
     return await save(key, value);
   }
+
+  /// 获取数据（任意类型）- 兼容旧代码调用
+  T? getData<T>(String key, {T? defaultValue}) {
+    return get<T>(key, defaultValue: defaultValue);
+  }
+
+  /// 删除数据 - 兼容旧代码调用
+  Future<bool> deleteData(String key) async {
+    return await remove(key);
+  }
 }
 
 /// 存储键常量

@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'offline_queue_manager.dart';
+import '../datasources/offline_queue_manager.dart';
 import '../../../core/storage/storage_manager.dart';
 
 /// 同步仓库实现 - 协调本地数据源和远程数据源，实现离线优先策略

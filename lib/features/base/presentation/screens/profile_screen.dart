@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/user_provider.dart';
 import '../widgets/user_info_widget.dart';
 import 'theme_settings_page.dart';
 import 'storage_management_page.dart';

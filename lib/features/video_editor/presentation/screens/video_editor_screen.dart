@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:litework/features/video_editor/presentation/providers/video_editor_provider.dart';
+import 'package:litework/features/video_editor/presentation/providers/video_provider.dart';
 import 'package:litework/features/video_editor/presentation/widgets/media_picker_panel.dart';
 import 'package:litework/features/video_editor/presentation/widgets/timeline_view.dart';
 import 'package:litework/features/video_editor/presentation/widgets/preview_player.dart';
@@ -20,7 +20,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<VideoEditorProvider>();
+      final provider = context.read<VideoProvider>();
       if (widget.projectId != null) {
         provider.loadProject(widget.projectId!);
       } else {
@@ -45,14 +45,14 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
           ),
         ],
       ),
-      body: Consumer<VideoEditorProvider>(
+      body: Consumer<VideoProvider>(
         builder: (context, provider, _) => _buildBody(provider),
       ),
       bottomSheet: const MediaPickerPanel(),
     );
   }
 
-  Widget _buildBody(VideoEditorProvider provider) {
+  Widget _buildBody(VideoProvider provider) {
     if (provider.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -76,14 +76,14 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
   }
 
   void _saveProject() {
-    context.read<VideoEditorProvider>().saveProject();
+    context.read<VideoProvider>().saveCurrentProject();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('项目已保存')),
     );
   }
 
   void _exportVideo() {
-    context.read<VideoEditorProvider>().exportVideo();
+    context.read<VideoProvider>().exportVideo();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('正在导出视频，请稍候...')),
     );

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:provider/provider.dart';
@@ -20,6 +21,8 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   TextEditingController? _titleController;
   late final FocusNode _editorFocusNode;
   late final ScrollController _editorScrollController;
+  Timer? _autoSaveTimer;
+  DateTime? _lastSaveTime;
 
   @override
   void initState() {
@@ -28,6 +31,26 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
     _editorFocusNode = FocusNode();
     _editorScrollController = ScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) => _initEditor());
+    _startAutoSave();
+  }
+
+  void _startAutoSave() {
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) {
+        _autoSave();
+      }
+    });
+  }
+
+  Future<void> _autoSave() async {
+    final provider = context.read<PostProvider>();
+    if (provider.currentPost != null) {
+      await provider.autoSave();
+      setState(() {
+        _lastSaveTime = DateTime.now();
+      });
+    }
   }
 
   Future<void> _initEditor() async {
@@ -59,6 +82,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
 
   @override
   void dispose() {
+    _autoSaveTimer?.cancel();
     _controller.dispose();
     _titleController?.dispose();
     _editorFocusNode.dispose();
@@ -247,7 +271,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
       color: AppTheme.surfaceColor,
       child: Row(
         children: [
-          const Icon(Icons.info_outline, size: 16, color: Colors.grey),
+          const Icon(Icons.cloud_done, size: 16, color: Colors.greenAccent),
           const SizedBox(width: 8),
           Text(
             '自动保存开启中',
@@ -255,7 +279,9 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
           ),
           const Spacer(),
           Text(
-            '最后更新：${_formatTime(DateTime.now())}',
+            _lastSaveTime != null
+                ? '最后更新：${_formatTime(_lastSaveTime!)}'
+                : '尚未保存',
             style: TextStyle(color: Colors.grey[600], fontSize: 12),
           ),
         ],

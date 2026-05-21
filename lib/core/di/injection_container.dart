@@ -8,7 +8,6 @@ import '../../features/base/presentation/providers/user_provider.dart';
 import '../../features/base/domain/usecases/user_usecases.dart';
 
 import '../../features/video_editor/presentation/providers/video_provider.dart';
-import '../../features/video_editor/presentation/viewmodel.dart';
 import '../../features/notes/presentation/viewmodel.dart';
 
 final GetIt sl = GetIt.instance;
@@ -53,6 +52,5 @@ Future<void> initDependencies() async {
   sl.registerFactory<NotesViewModel>(() => NotesViewModel());
 
   // Video Editor
-  sl.registerFactory<VideoEditorViewModel>(() => VideoEditorViewModel());
   sl.registerFactory<VideoProvider>(() => VideoProvider());
 }

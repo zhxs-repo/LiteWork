@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../viewmodel.dart';
+import '../providers/video_provider.dart';
 import '../../domain/models.dart';
 import '../../../../core/router/app_router.dart';
 
@@ -19,8 +19,8 @@ class _VideoListScreenState extends State<VideoListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final viewModel = context.read<VideoEditorViewModel>();
-      viewModel.initialize();
+      final provider = context.read<VideoProvider>();
+      provider.init().then((_) => provider.loadProjects());
     });
   }
 
@@ -36,23 +36,23 @@ class _VideoListScreenState extends State<VideoListScreen> {
           ),
         ],
       ),
-      body: Consumer<VideoEditorViewModel>(
-        builder: (context, viewModel, child) {
-          if (viewModel.isLoading && !viewModel.isInitialized) {
+      body: Consumer<VideoProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading && provider.projects.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (viewModel.error != null) {
+          if (provider.error != null) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
                   const SizedBox(height: 16),
-                  Text('加载失败：${viewModel.error}'),
+                  Text('加载失败：${provider.error}'),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () => viewModel.initialize(),
+                    onPressed: () => provider.loadProjects(),
                     child: const Text('重试'),
                   ),
                 ],
@@ -60,7 +60,7 @@ class _VideoListScreenState extends State<VideoListScreen> {
             );
           }
 
-          final projects = viewModel.projects;
+          final projects = provider.projects;
 
           if (projects.isEmpty) {
             return Center(
@@ -90,13 +90,13 @@ class _VideoListScreenState extends State<VideoListScreen> {
           }
 
           return RefreshIndicator(
-            onRefresh: () => viewModel.loadProjects(),
+            onRefresh: () => provider.loadProjects(),
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: projects.length,
               itemBuilder: (context, index) {
                 final project = projects[index];
-                return _buildProjectCard(context, project, viewModel);
+                return _buildProjectCard(context, project, provider);
               },
             ),
           );
@@ -105,9 +105,9 @@ class _VideoListScreenState extends State<VideoListScreen> {
     );
   }
 
-  Widget _buildProjectCard(BuildContext context, VideoProject project, VideoEditorViewModel viewModel) {
+  Widget _buildProjectCard(BuildContext context, VideoProject project, VideoProvider provider) {
     final statusColor = _getStatusColor(project.status);
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: InkWell(
@@ -193,7 +193,7 @@ class _VideoListScreenState extends State<VideoListScreen> {
               ),
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert, color: Colors.grey[600]),
-                onSelected: (value) => _handleMenuAction(context, project, value, viewModel),
+                onSelected: (value) => _handleMenuAction(context, project, value, provider),
                 itemBuilder: (context) => [
                   const PopupMenuItem(value: 'edit', child: Text('编辑')),
                   const PopupMenuItem(value: 'duplicate', child: Text('复制')),
@@ -274,8 +274,8 @@ class _VideoListScreenState extends State<VideoListScreen> {
           TextButton(
             onPressed: () {
               if (controller.text.isNotEmpty) {
-                final viewModel = context.read<VideoEditorViewModel>();
-                viewModel.createProject(controller.text);
+                final provider = context.read<VideoProvider>();
+                provider.createProject(controller.text);
                 Navigator.pop(ctx);
               }
             },
@@ -287,30 +287,29 @@ class _VideoListScreenState extends State<VideoListScreen> {
   }
 
   void _openProject(BuildContext context, String projectId) {
-    final viewModel = context.read<VideoEditorViewModel>();
-    viewModel.openProject(projectId);
-    context.push(AppRoutes.videoEditorEdit, params: {'id': projectId});
+    final provider = context.read<VideoProvider>();
+    provider.openProject(projectId);
+    context.push('${AppRoutes.videoEditorEdit.replaceAll(':id', projectId)}');
   }
 
-  void _handleMenuAction(BuildContext context, VideoProject project, String action, VideoEditorViewModel viewModel) {
+  void _handleMenuAction(BuildContext context, VideoProject project, String action, VideoProvider provider) {
     switch (action) {
       case 'edit':
         _openProject(context, project.id);
         break;
       case 'duplicate':
-        // 实现复制功能
-        viewModel.duplicateProject(project.id);
+        provider.duplicateProject(project.id);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('项目已复制')),
         );
         break;
       case 'delete':
-        _confirmDelete(context, project, viewModel);
+        _confirmDelete(context, project, provider);
         break;
     }
   }
 
-  void _confirmDelete(BuildContext context, VideoProject project, VideoEditorViewModel viewModel) {
+  void _confirmDelete(BuildContext context, VideoProject project, VideoProvider provider) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -323,7 +322,7 @@ class _VideoListScreenState extends State<VideoListScreen> {
           ),
           TextButton(
             onPressed: () {
-              viewModel.deleteProject(project.id);
+              provider.deleteProject(project.id);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('项目已删除')),

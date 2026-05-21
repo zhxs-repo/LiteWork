@@ -10,25 +10,25 @@ class OfflineQueueManager {
 
   final Box _box;
   final Connectivity _connectivity;
-  final StreamSubscription? _networkSubscription;
+  StreamSubscription<ConnectivityResult>? _networkSubscription;
 
   bool _isOnline = true;
   final List<Function()> _pendingListeners = [];
 
-  OfflineQueueManager._(this._box, this._connectivity, this._networkSubscription) {
+  OfflineQueueManager._(this._box, this._connectivity) {
     _listenToNetworkChanges();
   }
 
   static Future<OfflineQueueManager> create() async {
     final box = await Hive.openBox(_boxName);
     final connectivity = Connectivity();
-    final instance = OfflineQueueManager._(box, connectivity, null);
+    final instance = OfflineQueueManager._(box, connectivity);
     return instance;
   }
 
   void _listenToNetworkChanges() {
-    _networkSubscription = _connectivity.onConnectivityChanged.listen((results) {
-      final hasConnection = !results.contains(ConnectivityResult.none);
+    _networkSubscription = _connectivity.onConnectivityChanged.listen((result) {
+      final hasConnection = result != ConnectivityResult.none;
       if (hasConnection && !_isOnline) {
         _isOnline = true;
         _flushQueue();
@@ -41,8 +41,8 @@ class OfflineQueueManager {
 
   /// 检查当前是否在线
   Future<bool> checkConnectivity() async {
-    final results = await _connectivity.checkConnectivity();
-    _isOnline = !results.contains(ConnectivityResult.none);
+    final result = await _connectivity.checkConnectivity();
+    _isOnline = result != ConnectivityResult.none;
     return _isOnline;
   }
 

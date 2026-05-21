@@ -8,8 +8,6 @@ import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'core/storage/storage_manager.dart';
 import 'core/services/theme_notifier.dart';
-import 'features/video_editor/presentation/viewmodel.dart';
-import 'features/video_editor/presentation/providers/video_editor_provider.dart';
 import 'features/video_editor/presentation/providers/video_provider.dart';
 import 'features/notes/presentation/viewmodel.dart';
 import 'features/base/data/datasources/user_local_datasource.dart';
@@ -90,15 +88,7 @@ class LiteWorkApp extends StatelessWidget {
             )..loadPosts();
           },
         ),
-        // 视频编辑 ViewModel
-        ChangeNotifierProvider(
-          create: (_) => VideoEditorViewModel()..initialize(),
-        ),
-        // 视频编辑器 Provider（编辑器详情页使用）
-        ChangeNotifierProvider(
-          create: (_) => VideoEditorProvider()..init(),
-        ),
-        // 视频项目列表 + 导出 Provider
+        // 视频编辑统一 Provider
         ChangeNotifierProvider(
           create: (_) => VideoProvider()..init(),
         ),

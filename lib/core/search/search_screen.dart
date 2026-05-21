@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import '../../../core/storage/storage_manager.dart';
 import '../../../core/router/app_router.dart';
-import '../../../features/notes/domain/models.dart';
-import '../../../features/video_editor/domain/models.dart' as video;
 import 'search_result_model.dart';
 
 /// 全局搜索页面 - 接入真实数据源

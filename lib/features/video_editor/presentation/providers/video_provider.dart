@@ -1,26 +1,46 @@
 import 'package:flutter/foundation.dart';
 import '../../data/datasources/video_local_datasource.dart';
 import '../../data/models/video_project_model.dart' as data;
+import '../../data/models/media_item_model.dart';
+import '../../data/models/timeline_clip_model.dart';
 import '../../domain/models.dart' as domain;
 
-/// 视频项目列表 Provider - 已实现真实数据源
+/// 统一视频 Provider - 合并项目列表 CRUD、编辑器详情、导出配置
 class VideoProvider extends ChangeNotifier {
   final VideoLocalDataSource _dataSource = VideoLocalDataSource();
-  
+
+  // 项目列表状态
   List<domain.VideoProject> _projects = [];
   bool _isLoading = false;
+  String? _error;
+
+  // 当前编辑的项目
+  domain.VideoProject? _currentProject;
+  List<MediaItem> _availableMedia = [];
+  List<TimelineClip> _clips = [];
+
+  // 导出配置
   bool _isExporting = false;
   int _exportProgress = 0;
-  String? _error;
+  double _renderProgress = 0.0;
   String _resolution = '1080p';
   String _frameRate = '30';
   String _aspectRatio = '9:16';
 
+  // Getters - 项目列表
   List<domain.VideoProject> get projects => _projects;
   bool get isLoading => _isLoading;
+  String? get error => _error;
+
+  // Getters - 当前项目
+  domain.VideoProject? get currentProject => _currentProject;
+  List<MediaItem> get availableMedia => _availableMedia;
+  List<TimelineClip> get clips => _clips;
+
+  // Getters - 导出
   bool get isExporting => _isExporting;
   int get exportProgress => _exportProgress;
-  String? get error => _error;
+  double get renderProgress => _renderProgress;
   String get resolution => _resolution;
   String get frameRate => _frameRate;
   String get aspectRatio => _aspectRatio;
@@ -31,12 +51,13 @@ class VideoProvider extends ChangeNotifier {
     await _dataSource.init();
   }
 
+  // ==================== 项目列表 CRUD ====================
+
   Future<void> loadProjects() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      // 从数据源加载项目列表
       final dataProjects = await _dataSource.getAllProjects();
       _projects = dataProjects.map((dp) => domain.VideoProject(
         id: dp.id,
@@ -46,7 +67,7 @@ class VideoProvider extends ChangeNotifier {
         createdAt: dp.createdAt,
         updatedAt: dp.updatedAt,
       )).toList();
-      
+
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -56,24 +77,36 @@ class VideoProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> createProject(String title) async {
+  Future<void> createProject(String title, {domain.VideoTemplate? template}) async {
     try {
       _isLoading = true;
       notifyListeners();
 
-      // 创建新项目
       final dataProject = data.VideoProject(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: title,
+        mediaPaths: [],
+        duration: null,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        thumbnailPath: null,
       );
 
       await _dataSource.saveProject(dataProject);
-      
-      // 刷新列表
-      await loadProjects();
-      
+
+      final domainProject = domain.VideoProject(
+        id: dataProject.id,
+        title: dataProject.title,
+        clips: [],
+        status: domain.ProjectStatus.draft,
+        createdAt: dataProject.createdAt,
+        updatedAt: dataProject.updatedAt,
+        thumbnailPath: dataProject.thumbnailPath,
+      );
+
+      _projects.insert(0, domainProject);
+      _currentProject = domainProject;
+
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -89,8 +122,12 @@ class VideoProvider extends ChangeNotifier {
       notifyListeners();
 
       await _dataSource.deleteProject(id);
-      await loadProjects();
-      
+      _projects.removeWhere((p) => p.id == id);
+      if (_currentProject?.id == id) {
+        _currentProject = null;
+        _clips = [];
+      }
+
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -100,11 +137,259 @@ class VideoProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> duplicateProject(String id) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final original = _projects.firstWhere((p) => p.id == id);
+      final newId = DateTime.now().millisecondsSinceEpoch.toString();
+      final newProject = domain.VideoProject(
+        id: newId,
+        title: '${original.title} (副本)',
+        clips: original.clips,
+        status: domain.ProjectStatus.draft,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        thumbnailPath: original.thumbnailPath,
+      );
+
+      final dataProject = data.VideoProject(
+        id: newId,
+        title: newProject.title,
+        mediaPaths: original.clips.map((c) => c.sourcePath).toList(),
+        duration: original.clips.fold<Duration>(
+          Duration.zero,
+          (total, clip) => total + clip.duration,
+        ),
+        createdAt: newProject.createdAt,
+        updatedAt: newProject.updatedAt,
+        thumbnailPath: newProject.thumbnailPath,
+      );
+
+      await _dataSource.saveProject(dataProject);
+      _projects.insert(0, newProject);
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // ==================== 当前项目管理 ====================
+
+  void openProject(String projectId) {
+    _currentProject = _projects.firstWhere(
+      (p) => p.id == projectId,
+      orElse: () => throw Exception('Project not found'),
+    );
+    notifyListeners();
+  }
+
+  Future<void> loadProject(String projectId) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final dataProject = await _dataSource.getProjectById(projectId);
+      if (dataProject != null) {
+        _currentProject = domain.VideoProject(
+          id: dataProject.id,
+          title: dataProject.title,
+          clips: [],
+          status: domain.ProjectStatus.draft,
+          createdAt: dataProject.createdAt,
+          updatedAt: dataProject.updatedAt,
+        );
+
+        final clipsData = await _dataSource.getClipsForProject(projectId);
+        _clips = clipsData;
+      }
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> saveCurrentProject() async {
+    if (_currentProject == null) return;
+    try {
+      final dataProject = data.VideoProject(
+        id: _currentProject!.id,
+        title: _currentProject!.title,
+        mediaPaths: _clips.map((c) => c.mediaId).toList(),
+        duration: _currentProject!.totalDuration,
+        createdAt: _currentProject!.createdAt,
+        updatedAt: DateTime.now(),
+        thumbnailPath: _currentProject!.thumbnailPath,
+      );
+      await _dataSource.saveProject(dataProject);
+    } catch (e) {
+      _error = '保存失败：${e.toString()}';
+      notifyListeners();
+    }
+  }
+
+  // ==================== 素材管理 ====================
+
+  Future<void> importMedia(List<MediaItem> mediaList) async {
+    try {
+      await _dataSource.saveMediaBatch(mediaList);
+      _availableMedia.addAll(mediaList);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  // ==================== 时间线片段管理 ====================
+
+  Future<void> addClipToTimeline(TimelineClip clip) async {
+    try {
+      await _dataSource.saveClip(clip);
+      _clips.add(clip);
+
+      if (_currentProject != null) {
+        final maxEnd = _clips.fold<int>(
+          0,
+          (max, clip) => clip.startTimeMs + clip.durationMs > max ? clip.startTimeMs + clip.durationMs : max,
+        );
+        _currentProject = _currentProject!.copyWith(
+          totalDuration: Duration(milliseconds: maxEnd),
+          updatedAt: DateTime.now(),
+        );
+        await saveCurrentProject();
+      }
+
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateClip(TimelineClip clip) async {
+    try {
+      await _dataSource.saveClip(clip);
+      final index = _clips.indexWhere((c) => c.id == clip.id);
+      if (index != -1) {
+        _clips[index] = clip;
+      }
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteClip(String clipId) async {
+    try {
+      await _dataSource.deleteClip(clipId);
+      _clips.removeWhere((c) => c.id == clipId);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  // ==================== 片段效果管理 ====================
+
+  void addClip(domain.VideoClip clip) {
+    if (_currentProject != null) {
+      final updatedClips = List<domain.VideoClip>.from(_currentProject!.clips)..add(clip);
+      _currentProject = _currentProject!.copyWith(clips: updatedClips);
+      notifyListeners();
+    }
+  }
+
+  void removeClip(String clipId) {
+    if (_currentProject != null) {
+      final updatedClips = _currentProject!.clips.where((c) => c.id != clipId).toList();
+      _currentProject = _currentProject!.copyWith(clips: updatedClips);
+      notifyListeners();
+    }
+  }
+
+  void applyEffect(String clipId, domain.VideoEffect effect) {
+    if (_currentProject != null) {
+      final clipIndex = _currentProject!.clips.indexWhere((c) => c.id == clipId);
+      if (clipIndex != -1) {
+        final clip = _currentProject!.clips[clipIndex];
+        final updatedEffects = List<domain.VideoEffect>.from(clip.effects)..add(effect);
+        final updatedClip = clip.copyWith(effects: updatedEffects);
+        final updatedClips = List<domain.VideoClip>.from(_currentProject!.clips);
+        updatedClips[clipIndex] = updatedClip;
+        _currentProject = _currentProject!.copyWith(clips: updatedClips);
+        notifyListeners();
+      }
+    }
+  }
+
+  // ==================== 渲染与导出 ====================
+
+  Future<void> startRendering() async {
+    if (_currentProject == null || _currentProject!.clips.isEmpty) return;
+
+    _isLoading = true;
+    _renderProgress = 0.0;
+    notifyListeners();
+
+    try {
+      // 模拟 FFmpeg 渲染进度
+      for (int i = 0; i <= 100; i += 5) {
+        await Future.delayed(const Duration(milliseconds: 150));
+        _renderProgress = i / 100;
+        notifyListeners();
+      }
+
+      _currentProject = _currentProject!.copyWith(
+        status: domain.ProjectStatus.completed,
+      );
+      await saveCurrentProject();
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = '渲染失败：${e.toString()}';
+      _currentProject = _currentProject!.copyWith(
+        status: domain.ProjectStatus.failed,
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<String?> exportVideo() async {
+    if (_currentProject == null) return null;
+    try {
+      _isLoading = true;
+      notifyListeners();
+      await Future.delayed(const Duration(seconds: 2));
+      _isLoading = false;
+      notifyListeners();
+      return '/storage/emulated/0/DCIM/LiteWork/export_${DateTime.now().millisecondsSinceEpoch}.mp4';
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
   Future<void> startExport() async {
     _isExporting = true;
     _exportProgress = 0;
     notifyListeners();
-    
+
     try {
       for (int i = 0; i <= 100; i += 10) {
         await Future.delayed(const Duration(milliseconds: 300));
@@ -119,6 +404,8 @@ class VideoProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // ==================== 导出配置 ====================
 
   void setResolution(String value) {
     _resolution = value;
@@ -136,6 +423,14 @@ class VideoProvider extends ChangeNotifier {
   }
 
   void applyTemplate(String templateName) {
+    // TODO: 实现模板应用逻辑
+    notifyListeners();
+  }
+
+  // ==================== 错误处理 ====================
+
+  void clearError() {
+    _error = null;
     notifyListeners();
   }
 }

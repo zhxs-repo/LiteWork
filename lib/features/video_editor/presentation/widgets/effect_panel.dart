@@ -56,7 +56,7 @@ class EffectPanel extends StatelessWidget {
                   child: GestureDetector(
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('已应用 ${effect['label']} 效果')),
+                        SnackBar(content: Text('已应用 ${effect['name']} 效果')),
                       );
                     },
                     child: Column(

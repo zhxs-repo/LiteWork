@@ -5,10 +5,10 @@ import 'package:provider/provider.dart';
 import '../../features/base/presentation/screens/profile_screen.dart';
 import '../../features/publisher/presentation/screens/post_list_screen.dart';
 import '../../features/publisher/presentation/screens/post_editor_screen.dart';
+import '../../features/publisher/presentation/providers/post_provider.dart';
 import '../../features/notes/presentation/screens/trash_screen.dart';
 import '../../features/notes/presentation/screens/notes_list_screen.dart';
 import '../../features/notes/presentation/screens/note_editor_screen.dart';
-import '../../features/notes/presentation/viewmodel.dart';
 import '../../features/notes/domain/models.dart';
 import '../search/search_screen.dart';
 import '../../features/video_editor/presentation/screens/video_list_screen.dart';
@@ -102,7 +102,7 @@ class AppRouter {
               GoRoute(
                 path: 'create',
                 name: 'videoEditorCreate',
-                builder: (context, state) => const VideoEditorCreatePage(),
+                builder: (context, state) => const VideoEditorScreen(),
               ),
               GoRoute(
                 path: 'edit/:id',
@@ -245,10 +245,10 @@ class _HomeLayoutState extends State<HomeLayout> {
 
 // ==================== 空白页面定义 ====================
 
-/// 首页
+/// 首页 - 数据概览与快捷入口
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -261,125 +261,208 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildQuickActions(context),
+          const SizedBox(height: 24),
+          _buildStatsSection(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '快捷操作',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        Row(
           children: [
-            Icon(Icons.workspaces_outlined, size: 80, color: Color(0xFF6366F1)),
-            SizedBox(height: 24),
-            Text(
-              '欢迎使用 LiteWork',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Expanded(
+              child: _QuickActionCard(
+                icon: Icons.note_add,
+                label: '新建笔记',
+                color: Colors.blue,
+                onTap: () => context.push(AppRoutes.notes),
+              ),
             ),
-            SizedBox(height: 12),
-            Text(
-              '内容创作与管理工具',
-              style: TextStyle(fontSize: 16, color: Color(0xFF64748B)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _QuickActionCard(
+                icon: Icons.post_add,
+                label: '新建草稿',
+                color: Colors.green,
+                onTap: () => context.push(AppRoutes.publisher),
+              ),
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _QuickActionCard(
+                icon: Icons.video_library,
+                label: '视频剪辑',
+                color: Colors.orange,
+                onTap: () => context.push(AppRoutes.videoEditor),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _QuickActionCard(
+                icon: Icons.search,
+                label: '搜索',
+                color: Colors.purple,
+                onTap: () => context.push(AppRoutes.search),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '数据概览',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        Consumer<PostProvider>(
+          builder: (context, postProvider, _) {
+            final postCount = postProvider.posts.length;
+            return Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    icon: Icons.article,
+                    label: '图文草稿',
+                    count: postCount,
+                    color: Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatCard(
+                    icon: Icons.video_library,
+                    label: '视频项目',
+                    count: 0,
+                    color: Colors.orange,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                icon: Icons.note,
+                label: '笔记',
+                count: 0,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                icon: Icons.delete_outline,
+                label: '回收站',
+                count: 0,
+                color: Colors.red,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickActionCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Icon(icon, size: 32, color: color),
+              const SizedBox(height: 8),
+              Text(label, style: const TextStyle(fontSize: 14)),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// 图文发布页面
-class PublisherPage extends StatelessWidget {
-  const PublisherPage({super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('图文发布'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => context.push('${AppRoutes.publisher}/create'),
-          ),
-        ],
-      ),
-      body: const Center(
-        child: Text('图文发布列表'),
-      ),
-    );
-  }
-}
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int count;
+  final Color color;
 
-class PublisherCreatePage extends StatelessWidget {
-  const PublisherCreatePage({super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('创建发布')),
-      body: const Center(
-        child: Text('创建图文发布内容'),
-      ),
-    );
-  }
-}
-
-class PublisherEditPage extends StatelessWidget {
-  const PublisherEditPage({super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('编辑发布')),
-      body: const Center(
-        child: Text('编辑图文发布内容'),
-      ),
-    );
-  }
-}
-
-/// 视频剪辑页面
-class VideoEditorPage extends StatelessWidget {
-  const VideoEditorPage({super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('视频剪辑'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => context.push('${AppRoutes.videoEditor}/create'),
-          ),
-        ],
-      ),
-      body: const Center(
-        child: Text('视频剪辑项目列表'),
-      ),
-    );
-  }
-}
-
-class VideoEditorCreatePage extends StatelessWidget {
-  const VideoEditorCreatePage({super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('新建剪辑')),
-      body: const Center(
-        child: Text('创建视频剪辑项目'),
-      ),
-    );
-  }
-}
-
-/// 笔记管理页面（主容器）- 带 Provider
-class NotesPage extends StatelessWidget {
-  const NotesPage({super.key});
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<NotesViewModel>(
-      create: (_) => NotesViewModel(),
-      child: const NotesListScreen(),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(icon, size: 28, color: color),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+                Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

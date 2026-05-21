@@ -63,7 +63,7 @@ class VideoClip {
   final double? volume;
   final List<VideoEffect> effects;
   final String? transition;
-  
+
   VideoClip({
     required this.id,
     required this.sourcePath,
@@ -74,6 +74,28 @@ class VideoClip {
     this.effects = const [],
     this.transition,
   });
+
+  VideoClip copyWith({
+    String? id,
+    String? sourcePath,
+    Duration? startTime,
+    Duration? endTime,
+    Duration? duration,
+    double? volume,
+    List<VideoEffect>? effects,
+    String? transition,
+  }) {
+    return VideoClip(
+      id: id ?? this.id,
+      sourcePath: sourcePath ?? this.sourcePath,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      duration: duration ?? this.duration,
+      volume: volume ?? this.volume,
+      effects: effects ?? this.effects,
+      transition: transition ?? this.transition,
+    );
+  }
 }
 
 /// 视频效果模型
