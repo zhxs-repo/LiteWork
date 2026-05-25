@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -114,6 +115,7 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
               const PopupMenuItem(value: 'delete_node', child: Text('删除节点')),
               const PopupMenuItem(value: 'change_layout', child: Text('切换布局')),
               const PopupMenuItem(value: 'export', child: Text('导出')),
+              const PopupMenuItem(value: 'convert_to_richtext', child: Text('转换为富文本')),
             ],
           ),
         ],
@@ -122,17 +124,33 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
           ? const Center(child: CircularProgressIndicator())
           : RepaintBoundary(
               key: _repaintKey,
-              child: GestureDetector(
-                onPanUpdate: (details) {
-                  // 画布拖拽逻辑可以在这里实现
-                },
-                child: CustomPaint(
-                  size: Size.infinite,
-                  painter: MindMapPainter(
-                    mindMapData: _mindMapData!,
-                    selectedNodeId: _selectedNodeId,
-                    onNodeTap: _onNodeTap,
-                    onNodeDoubleTap: _onNodeDoubleTap,
+              child: InteractiveViewer(
+                constrained: false,
+                boundaryMargin: const EdgeInsets.all(300),
+                minScale: 0.3,
+                maxScale: 3.0,
+                child: GestureDetector(
+                  onTapUp: (details) {
+                    final nodeId = _hitTestNode(details.localPosition);
+                    if (nodeId != null) {
+                      _onNodeTap(nodeId);
+                    } else {
+                      setState(() => _selectedNodeId = null);
+                    }
+                  },
+                  onDoubleTapDown: (details) {
+                    final nodeId = _hitTestNode(details.localPosition);
+                    if (nodeId != null) _onNodeDoubleTap(nodeId);
+                  },
+                  child: SizedBox(
+                    width: 3000,
+                    height: 3000,
+                    child: CustomPaint(
+                      painter: MindMapPainter(
+                        mindMapData: _mindMapData!,
+                        selectedNodeId: _selectedNodeId,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -370,17 +388,68 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
     final layouts = MindMapLayout.values;
     final currentIndex = layouts.indexOf(_mindMapData!.layout);
     final nextIndex = (currentIndex + 1) % layouts.length;
+    final newLayout = layouts[nextIndex];
+
+    final updatedNodes = Map<String, MindMapNode>.from(_mindMapData!.nodes);
+    final cx = 400.0;
+    final cy = 300.0;
+
+    // Reposition root
+    final root = _mindMapData!.root.copyWith(x: cx, y: cy);
+
+    // Get all child nodes excluding root
+    final children = root.childIds
+        .map((id) => updatedNodes[id])
+        .whereType<MindMapNode>()
+        .toList();
+
+    switch (newLayout) {
+      case MindMapLayout.horizontal:
+        for (int i = 0; i < children.length; i++) {
+          final child = children[i];
+          updatedNodes[child.id] = child.copyWith(
+            x: cx + 250 + (i ~/ 5) * 200,
+            y: cy - 100 * ((children.length - 1) / 2 - i),
+          );
+        }
+        break;
+      case MindMapLayout.vertical:
+        for (int i = 0; i < children.length; i++) {
+          final child = children[i];
+          updatedNodes[child.id] = child.copyWith(
+            x: cx - 100 * ((children.length - 1) / 2 - i),
+            y: cy + 120 + (i ~/ 5) * 100,
+          );
+        }
+        break;
+      case MindMapLayout.radial:
+        for (int i = 0; i < children.length; i++) {
+          final angle = (2 * math.pi * i) / children.length - math.pi / 2;
+          final r = 200.0;
+          final child = children[i];
+          updatedNodes[child.id] = child.copyWith(
+            x: cx + r * math.cos(angle),
+            y: cy + r * math.sin(angle),
+          );
+        }
+        break;
+      case MindMapLayout.free:
+        // Free layout — keep existing positions
+        break;
+    }
+
+    updatedNodes['root'] = root;
 
     setState(() {
       _mindMapData = MindMapData(
-        root: _mindMapData!.root,
-        nodes: _mindMapData!.nodes,
-        layout: layouts[nextIndex],
+        root: root,
+        nodes: updatedNodes,
+        layout: newLayout,
       );
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('布局已切换为：${_getLayoutName(layouts[nextIndex])}')),
+      SnackBar(content: Text('布局已切换为：${_getLayoutName(newLayout)}')),
     );
   }
 
@@ -455,6 +524,26 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
 ''';
   }
 
+  String? _hitTestNode(Offset position) {
+    if (_mindMapData == null) return null;
+    for (final node in _mindMapData!.nodes.values) {
+      if (node.x == null || node.y == null) continue;
+      final nodeRect = Rect.fromCenter(
+        center: Offset(node.x!, node.y!),
+        width: 160,
+        height: 50,
+      );
+      if (nodeRect.contains(position)) return node.id;
+    }
+    final rootRect = Rect.fromCenter(
+      center: Offset(_mindMapData!.root.x ?? 0, _mindMapData!.root.y ?? 0),
+      width: 180,
+      height: 60,
+    );
+    if (rootRect.contains(position)) return 'root';
+    return null;
+  }
+
   void _handleMenuAction(String action) {
     switch (action) {
       case 'add_child':
@@ -469,6 +558,57 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
       case 'export':
         _exportMindMap();
         break;
+      case 'convert_to_richtext':
+        _convertToRichText();
+        break;
+    }
+  }
+
+  void _convertToRichText() async {
+    if (_mindMapData == null) return;
+    final sb = StringBuffer();
+    sb.writeln('# ${_mindMapData!.root.text}');
+    for (final childId in _mindMapData!.root.childIds) {
+      final child = _mindMapData!.nodes[childId];
+      if (child != null) {
+        sb.writeln('## ${child.text}');
+        for (final grandchildId in child.childIds) {
+          final grandchild = _mindMapData!.nodes[grandchildId];
+          if (grandchild != null) {
+            sb.writeln('- ${grandchild.text}');
+          }
+        }
+      }
+    }
+
+    final viewModel = context.read<NotesViewModel>();
+    final title = _titleController.text.trim().isEmpty ? '思维导图' : _titleController.text.trim();
+
+    if (widget.noteId != null) {
+      final note = viewModel.currentNote;
+      if (note != null) {
+        await viewModel.updateNote(note.copyWith(
+          title: title,
+          content: sb.toString(),
+          type: NoteType.richText,
+          mindMapData: _mindMapData,
+          updatedAt: DateTime.now(),
+        ));
+      }
+    } else {
+      await viewModel.createNote(
+        title: title,
+        content: sb.toString(),
+        type: NoteType.richText,
+        mindMapData: _mindMapData,
+      );
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已转换为富文本笔记')),
+      );
+      Navigator.pop(context);
     }
   }
 
@@ -511,14 +651,10 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
 class MindMapPainter extends CustomPainter {
   final MindMapData mindMapData;
   final String? selectedNodeId;
-  final Function(String) onNodeTap;
-  final Function(String) onNodeDoubleTap;
 
   MindMapPainter({
     required this.mindMapData,
     this.selectedNodeId,
-    required this.onNodeTap,
-    required this.onNodeDoubleTap,
   });
 
   @override

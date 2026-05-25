@@ -6,7 +6,10 @@ import '../../features/base/presentation/screens/profile_screen.dart';
 import '../../features/publisher/presentation/screens/post_list_screen.dart';
 import '../../features/publisher/presentation/screens/post_editor_screen.dart';
 import '../../features/publisher/presentation/providers/post_provider.dart';
+import '../../features/notes/presentation/viewmodel.dart';
+import '../../features/video_editor/presentation/providers/video_provider.dart';
 import '../../features/notes/presentation/screens/trash_screen.dart';
+import '../../features/home/widgets/recent_items_list.dart';
 import '../../features/notes/presentation/screens/notes_list_screen.dart';
 import '../../features/notes/presentation/screens/note_editor_screen.dart';
 import '../../features/notes/domain/models.dart';
@@ -266,6 +269,8 @@ class HomePage extends StatelessWidget {
         children: [
           _buildQuickActions(context),
           const SizedBox(height: 24),
+          const RecentItemsList(),
+          const SizedBox(height: 24),
           _buildStatsSection(context),
         ],
       ),
@@ -288,7 +293,7 @@ class HomePage extends StatelessWidget {
                 icon: Icons.note_add,
                 label: '新建笔记',
                 color: Colors.blue,
-                onTap: () => context.push(AppRoutes.notes),
+                onTap: () => context.pushNamed('notesCreate'),
               ),
             ),
             const SizedBox(width: 12),
@@ -297,7 +302,7 @@ class HomePage extends StatelessWidget {
                 icon: Icons.post_add,
                 label: '新建草稿',
                 color: Colors.green,
-                onTap: () => context.push(AppRoutes.publisher),
+                onTap: () => context.pushNamed('postEditor'),
               ),
             ),
           ],
@@ -329,6 +334,10 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildStatsSection(BuildContext context) {
+    final postProvider = context.watch<PostProvider>();
+    final videoProvider = context.watch<VideoProvider>();
+    final notesViewModel = context.watch<NotesViewModel>();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -337,31 +346,26 @@ class HomePage extends StatelessWidget {
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        Consumer<PostProvider>(
-          builder: (context, postProvider, _) {
-            final postCount = postProvider.posts.length;
-            return Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.article,
-                    label: '图文草稿',
-                    count: postCount,
-                    color: Colors.green,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.video_library,
-                    label: '视频项目',
-                    count: 0,
-                    color: Colors.orange,
-                  ),
-                ),
-              ],
-            );
-          },
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                icon: Icons.article,
+                label: '图文草稿',
+                count: postProvider.posts.length,
+                color: Colors.green,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                icon: Icons.video_library,
+                label: '视频项目',
+                count: videoProvider.projects.length,
+                color: Colors.orange,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         Row(
@@ -370,7 +374,7 @@ class HomePage extends StatelessWidget {
               child: _StatCard(
                 icon: Icons.note,
                 label: '笔记',
-                count: 0,
+                count: notesViewModel.notes.length,
                 color: Colors.blue,
               ),
             ),
@@ -379,8 +383,9 @@ class HomePage extends StatelessWidget {
               child: _StatCard(
                 icon: Icons.delete_outline,
                 label: '回收站',
-                count: 0,
+                count: notesViewModel.trashItems.length,
                 color: Colors.red,
+                onTap: () => context.push(AppRoutes.trash),
               ),
             ),
           ],
@@ -429,38 +434,44 @@ class _StatCard extends StatelessWidget {
   final String label;
   final int count;
   final Color color;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.icon,
     required this.label,
     required this.count,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(icon, size: 28, color: color),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$count',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: color,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(icon, size: 28, color: color),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$count',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
                   ),
-                ),
-                Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              ],
-            ),
-          ],
+                  Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

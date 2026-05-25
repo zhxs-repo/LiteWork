@@ -31,25 +31,17 @@ class ProfilePage extends StatelessWidget {
                   icon: Icons.person_outline,
                   title: '编辑资料',
                   subtitle: '修改昵称、头像',
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('游客模式暂不支持编辑资料')),
-                    );
-                  },
+                  enabled: false,
                 ),
                 _buildListTile(
                   icon: Icons.cloud_upload_outlined,
                   title: '云同步',
                   subtitle: 'WebDAV 数据同步',
                   trailing: const Text(
-                    '未配置',
+                    '即将上线',
                     style: TextStyle(color: Colors.grey),
                   ),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('即将支持 WebDAV 配置')),
-                    );
-                  },
+                  enabled: false,
                 ),
               ],
             ),
@@ -133,13 +125,16 @@ class ProfilePage extends StatelessWidget {
     String? subtitle,
     Widget? trailing,
     VoidCallback? onTap,
+    bool enabled = true,
   }) {
     return ListTile(
-      leading: Icon(icon, color: Colors.blue),
+      leading: Icon(icon, color: enabled ? Colors.blue : Colors.grey),
       title: Text(title),
       subtitle: subtitle != null ? Text(subtitle) : null,
-      trailing: trailing ?? const Icon(Icons.chevron_right),
-      onTap: onTap,
+      trailing: trailing != null
+          ? trailing
+          : (enabled ? const Icon(Icons.chevron_right) : null),
+      onTap: enabled ? onTap : null,
     );
   }
 

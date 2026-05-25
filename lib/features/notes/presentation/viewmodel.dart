@@ -56,10 +56,17 @@ class NotesViewModel extends ChangeNotifier {
   String? get selectedFolderId => _selectedFolderId;
   bool get isInitialized => _isInitialized;
 
-  /// 获取过滤后的笔记列表
+  /// 获取过滤后的笔记列表（置顶在前）
   List<Note> get filteredNotes {
-    if (_selectedFolderId == null) return _notes;
-    return _notes.where((n) => n.folderId == _selectedFolderId).toList();
+    final filtered = _selectedFolderId == null
+        ? _notes
+        : _notes.where((n) => n.folderId == _selectedFolderId).toList();
+    filtered.sort((a, b) {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return b.updatedAt.compareTo(a.updatedAt);
+    });
+    return filtered;
   }
 
   /// 初始化数据源并加载数据
@@ -128,6 +135,7 @@ class NotesViewModel extends ChangeNotifier {
     String content = '',
     NoteType type = NoteType.richText,
     String? folderId,
+    MindMapData? mindMapData,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -139,6 +147,7 @@ class NotesViewModel extends ChangeNotifier {
         content: content,
         type: type,
         folderId: folderId,
+        mindMapData: mindMapData,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -207,6 +216,18 @@ class NotesViewModel extends ChangeNotifier {
     } catch (e) {
       _isLoading = false;
       _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  /// 切换置顶状态
+  void togglePin(String noteId) {
+    final index = _notes.indexWhere((n) => n.id == noteId);
+    if (index != -1) {
+      _notes[index] = _notes[index].copyWith(isPinned: !_notes[index].isPinned);
+      if (_currentNote?.id == noteId) {
+        _currentNote = _notes[index];
+      }
       notifyListeners();
     }
   }

@@ -106,11 +106,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           ),
           PopupMenuButton<String>(
             onSelected: _handleMenuAction,
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'favorite', child: Text('收藏')),
-              const PopupMenuItem(value: 'folder', child: Text('移动到文件夹')),
-              const PopupMenuItem(value: 'delete', child: Text('删除')),
-            ],
+            itemBuilder: (context) {
+              final note = context.read<NotesViewModel>().currentNote;
+              final type = note?.type ?? widget.createType ?? NoteType.richText;
+              return [
+                const PopupMenuItem(value: 'favorite', child: Text('收藏')),
+                const PopupMenuItem(value: 'folder', child: Text('移动到文件夹')),
+                PopupMenuItem(
+                  value: 'convert_type',
+                  child: Text(type == NoteType.mindMap ? '转换为富文本' : '转换为思维导图'),
+                ),
+                const PopupMenuItem(value: 'delete', child: Text('删除')),
+              ];
+            },
           ),
         ],
       ),
@@ -236,6 +244,26 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       case 'delete':
         _confirmDelete(viewModel, note);
         break;
+      case 'convert_type':
+        _convertNoteType(viewModel, note);
+        break;
+    }
+  }
+
+  void _convertNoteType(NotesViewModel viewModel, Note note) async {
+    final newType = note.type == NoteType.mindMap ? NoteType.richText : NoteType.mindMap;
+    final label = newType == NoteType.mindMap ? '思维导图' : '富文本';
+
+    final converted = await viewModel.updateNote(note.copyWith(
+      type: newType,
+      updatedAt: DateTime.now(),
+    ));
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已转换为$label')),
+      );
+      setState(() {});
     }
   }
 

@@ -1,8 +1,10 @@
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import '../../data/datasources/video_local_datasource.dart';
 import '../../data/models/video_project_model.dart' as data;
 import '../../data/models/media_item_model.dart';
 import '../../data/models/timeline_clip_model.dart';
+import '../../data/models/timeline_data_model.dart';
 import '../../domain/models.dart' as domain;
 
 /// 统一视频 Provider - 合并项目列表 CRUD、编辑器详情、导出配置
@@ -301,37 +303,61 @@ class VideoProvider extends ChangeNotifier {
     }
   }
 
-  // ==================== 片段效果管理 ====================
+  // ==================== 时间线数据转换 ====================
 
-  void addClip(domain.VideoClip clip) {
-    if (_currentProject != null) {
-      final updatedClips = List<domain.VideoClip>.from(_currentProject!.clips)..add(clip);
-      _currentProject = _currentProject!.copyWith(clips: updatedClips);
-      notifyListeners();
-    }
+  String? get firstClipPath {
+    if (_clips.isEmpty) return null;
+    final clip = _clips.first;
+    final media = _availableMedia.firstWhere(
+      (m) => m.id == clip.mediaId,
+      orElse: () => MediaItem(id: '', path: '', type: MediaType.image, durationMs: 0, createdAt: DateTime.now()),
+    );
+    return media.path.isNotEmpty ? media.path : null;
   }
 
-  void removeClip(String clipId) {
-    if (_currentProject != null) {
-      final updatedClips = _currentProject!.clips.where((c) => c.id != clipId).toList();
-      _currentProject = _currentProject!.copyWith(clips: updatedClips);
-      notifyListeners();
+  TimelineData buildTimelineData() {
+    final trackMap = <int, List<TimelineClip>>{};
+    for (final clip in _clips) {
+      trackMap.putIfAbsent(clip.trackIndex, () => []).add(clip);
     }
-  }
 
-  void applyEffect(String clipId, domain.VideoEffect effect) {
-    if (_currentProject != null) {
-      final clipIndex = _currentProject!.clips.indexWhere((c) => c.id == clipId);
-      if (clipIndex != -1) {
-        final clip = _currentProject!.clips[clipIndex];
-        final updatedEffects = List<domain.VideoEffect>.from(clip.effects)..add(effect);
-        final updatedClip = clip.copyWith(effects: updatedEffects);
-        final updatedClips = List<domain.VideoClip>.from(_currentProject!.clips);
-        updatedClips[clipIndex] = updatedClip;
-        _currentProject = _currentProject!.copyWith(clips: updatedClips);
-        notifyListeners();
-      }
+    final tracks = <Track>[];
+    for (final entry in trackMap.entries) {
+      final trackType = switch (entry.key) {
+        0 || 1 => TrackType.video,
+        2     => TrackType.audio,
+        3     => TrackType.text,
+        _     => TrackType.video,
+      };
+
+      final sortedClips = List<TimelineClip>.from(entry.value)
+        ..sort((a, b) => a.positionMs.compareTo(b.positionMs));
+      final segments = sortedClips.map((clip) {
+        final clipIndex = _clips.indexOf(clip);
+        final media = _availableMedia.firstWhere(
+          (m) => m.id == clip.mediaId,
+          orElse: () => MediaItem(id: '', path: '', type: MediaType.image, durationMs: 0, createdAt: DateTime.now()),
+        );
+        return TimelineSegment(
+          id: clipIndex,
+          name: media.path.split('/').last,
+          startTime: clip.positionMs / 1000.0,
+          duration: clip.durationMs / 1000.0,
+          type: trackType,
+        );
+      }).toList();
+
+      tracks.add(Track(
+        id: 'track_${entry.key}',
+        type: trackType,
+        segments: segments,
+      ));
     }
+
+    final maxDuration = _clips.fold<double>(
+      0, (max, clip) => math.max(max, (clip.positionMs + clip.durationMs) / 1000.0));
+
+    return TimelineData(tracks: tracks, totalDuration: maxDuration);
   }
 
   // ==================== 渲染与导出 ====================

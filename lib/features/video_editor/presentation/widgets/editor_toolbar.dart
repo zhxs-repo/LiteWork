@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 
 class EditorToolbar extends StatelessWidget {
-  const EditorToolbar({super.key});
+  final bool hasSelection;
+  final VoidCallback? onSplit;
+  final VoidCallback? onDelete;
+
+  const EditorToolbar({
+    super.key,
+    this.hasSelection = false,
+    this.onSplit,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -12,8 +21,18 @@ class EditorToolbar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _ToolbarButton(icon: Icons.cut, label: '分割'),
-          _ToolbarButton(icon: Icons.delete, label: '删除'),
+          _ToolbarButton(
+            icon: Icons.cut,
+            label: '分割',
+            enabled: hasSelection,
+            onTap: onSplit,
+          ),
+          _ToolbarButton(
+            icon: Icons.delete,
+            label: '删除',
+            enabled: hasSelection,
+            onTap: onDelete,
+          ),
           _ToolbarButton(icon: Icons.speed, label: '变速'),
           _ToolbarButton(icon: Icons.flip, label: '倒放'),
           _ToolbarButton(icon: Icons.filter, label: '滤镜'),
@@ -28,28 +47,40 @@ class EditorToolbar extends StatelessWidget {
 class _ToolbarButton extends StatelessWidget {
   final IconData icon;
   final String label;
+  final bool enabled;
+  final VoidCallback? onTap;
 
-  const _ToolbarButton({required this.icon, required this.label});
+  const _ToolbarButton({
+    required this.icon,
+    required this.label,
+    this.enabled = false,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$label 功能开发中...')),
-        );
-      },
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: cs.onSurface, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(color: cs.onSurface, fontSize: 10),
+    final isActive = enabled && onTap != null;
+    final opacity = isActive ? 1.0 : 0.38;
+    return Tooltip(
+      message: isActive ? label : '即将上线',
+      preferBelow: false,
+      child: Opacity(
+        opacity: opacity,
+        child: InkWell(
+          onTap: isActive ? onTap : null,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: cs.onSurface, size: 24),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(color: cs.onSurface, fontSize: 10),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

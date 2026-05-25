@@ -1,119 +1,33 @@
 import 'package:flutter/material.dart';
+import '../../data/models/timeline_data_model.dart';
+import 'timeline_canvas.dart';
 
 class TimelineView extends StatelessWidget {
-  const TimelineView({super.key});
+  final TimelineData timelineData;
+  final Function(int segmentId)? onSegmentSelected;
+  final Function(double position)? onSeek;
+  final Function(int segmentId, double newStartTime)? onClipMoved;
+
+  const TimelineView({
+    super.key,
+    required this.timelineData,
+    this.onSegmentSelected,
+    this.onSeek,
+    this.onClipMoved,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Container(
       color: cs.surfaceContainerHighest,
-      child: Column(
-        children: [
-          // 时间标尺
-          SizedBox(
-            height: 30,
-            child: CustomPaint(
-              painter: _RulerPainter(textColor: cs.onSurfaceVariant),
-              size: Size.infinite,
-            ),
-          ),
-          // 轨道区域
-          Expanded(
-            child: ListView.builder(
-              itemCount: 4,
-              itemBuilder: (context, index) {
-                return _TrackRow(
-                  trackIndex: index,
-                  trackName: ['主视频', '画中画', '音频', '字幕'][index],
-                );
-              },
-            ),
-          ),
-        ],
+      child: TimelineCanvas(
+        timelineData: timelineData,
+        onSegmentSelected: onSegmentSelected ?? (_) {},
+        onSeek: onSeek ?? (_) {},
+        onClipMoved: onClipMoved,
+        zoomLevel: 50.0,
       ),
     );
   }
-}
-
-class _TrackRow extends StatelessWidget {
-  final int trackIndex;
-  final String trackName;
-  const _TrackRow({required this.trackIndex, required this.trackName});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      height: 60,
-      margin: const EdgeInsets.symmetric(vertical: 2),
-      color: cs.surfaceContainerHigh,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 10,
-            top: 0,
-            bottom: 0,
-            width: 80,
-            child: Center(
-              child: Text(
-                trackName,
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 100,
-            top: 10,
-            child: Container(
-              width: 150,
-              height: 40,
-              decoration: BoxDecoration(
-                color: cs.primary,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Center(
-                child: Text(
-                  '片段 ${trackIndex + 1}',
-                  style: TextStyle(color: cs.onPrimary),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RulerPainter extends CustomPainter {
-  final Color textColor;
-  _RulerPainter({required this.textColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = textColor.withValues(alpha: 0.3)
-      ..strokeWidth = 1;
-
-    final textPainter = TextPainter(textDirection: TextDirection.ltr);
-
-    for (int i = 0; i < 20; i++) {
-      final x = i * 50.0;
-      canvas.drawLine(Offset(x, 0), Offset(x, 15), paint);
-
-      if (i % 5 == 0) {
-        textPainter.text = TextSpan(
-          text: '${i}s',
-          style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 10),
-        );
-        textPainter.layout();
-        textPainter.paint(canvas, Offset(x + 2, 18));
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _RulerPainter oldDelegate) =>
-      oldDelegate.textColor != textColor;
 }

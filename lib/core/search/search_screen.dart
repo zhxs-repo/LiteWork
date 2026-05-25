@@ -18,20 +18,6 @@ class _SearchScreenState extends State<SearchScreen> {
   String _filterType = 'all';
   List<SearchResult> _results = [];
   bool _isSearching = false;
-  bool _isInitialized = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeSearchEngine();
-  }
-
-  /// 从真实数据源加载搜索结果
-  Future<void> _initializeSearchEngine() async {
-    setState(() {
-      _isInitialized = true;
-    });
-  }
 
   /// 从存储中搜索笔记
   List<SearchResult> _searchNotes(String query) {
@@ -204,7 +190,7 @@ class _SearchScreenState extends State<SearchScreen> {
           const SizedBox(width: 8),
           _filterChip('笔记', 'note'),
           const SizedBox(width: 8),
-          _filterChip('图文', 'publisher'),
+          _filterChip('图文', 'post'),
           const SizedBox(width: 8),
           _filterChip('视频', 'video'),
         ],

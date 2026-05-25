@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/post_provider.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -23,6 +25,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   late final ScrollController _editorScrollController;
   Timer? _autoSaveTimer;
   DateTime? _lastSaveTime;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -78,11 +81,64 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         _isInitialized = true;
       });
     }
+    _controller.addListener(_onContentChanged);
+  }
+
+  void _onContentChanged() {
+    if (!mounted || !_isInitialized) return;
+    final provider = context.read<PostProvider>();
+    if (provider.currentPost != null) {
+      provider.updateContent(_controller.document.toDelta());
+    }
+  }
+
+  Future<void> _insertImages() async {
+    final files = await _picker.pickMultipleMedia();
+    if (!mounted || files.isEmpty) return;
+    for (final file in files) {
+      final index = _controller.selection.baseOffset;
+      _controller.document.insert(index, quill.BlockEmbed.image(file.path));
+    }
+  }
+
+  Future<void> _setCoverImage() async {
+    final file = await _picker.pickImage(source: ImageSource.gallery);
+    if (!mounted || file == null) return;
+    context.read<PostProvider>().updateCoverImage(file.path);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已设置封面图')),
+      );
+    }
+  }
+
+  Future<void> _copyAsText() async {
+    final text = _controller.document.toPlainText();
+    await Clipboard.setData(ClipboardData(text: text));
+  }
+
+  void _showExportSheet(PostProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => _ExportSheet(
+        onCopyText: () {
+          Navigator.pop(ctx);
+          _copyAsText().then((_) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('已复制内容，请粘贴到目标平台')),
+            );
+            provider.publishPost();
+          });
+        },
+      ),
+    );
   }
 
   @override
   void dispose() {
     _autoSaveTimer?.cancel();
+    _controller.removeListener(_onContentChanged);
     _controller.dispose();
     _titleController?.dispose();
     _editorFocusNode.dispose();
@@ -121,17 +177,17 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         },
       ),
       actions: [
-        Consumer<PostProvider>(
-          builder: (context, provider, _) {
-            return Row(
-              children: [
-                _buildSaveIndicator(provider),
-                _buildPublishButton(provider),
-                _buildMoreMenu(provider),
-              ],
-            );
-          },
-        ),
+          Consumer<PostProvider>(
+            builder: (context, provider, _) {
+              return Row(
+                children: [
+                  _buildSaveIndicator(provider),
+                  _buildExportButton(provider),
+                  _buildMoreMenu(provider),
+                ],
+              );
+            },
+          ),
       ],
     );
   }
@@ -156,18 +212,14 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
     return const SizedBox.shrink();
   }
 
-  Widget _buildPublishButton(PostProvider provider) {
+  Widget _buildExportButton(PostProvider provider) {
     return IconButton(
       icon: const Icon(Icons.publish),
-      tooltip: '发布',
+      tooltip: '导出',
       onPressed: () async {
         await provider.autoSave();
-        await provider.publishPost();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('发布成功！')),
-          );
-        }
+        if (!mounted) return;
+        _showExportSheet(provider);
       },
     );
   }
@@ -247,6 +299,25 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   Widget _buildBody() {
     return Column(
       children: [
+        Container(
+          height: 44,
+          color: AppTheme.surfaceColor,
+          child: Row(
+            children: [
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(Icons.image, size: 20),
+                tooltip: '插入图片',
+                onPressed: _insertImages,
+              ),
+              IconButton(
+                icon: const Icon(Icons.image_search, size: 20),
+                tooltip: '设置封面图',
+                onPressed: _setCoverImage,
+              ),
+            ],
+          ),
+        ),
         quill.QuillSimpleToolbar(controller: _controller),
         const Divider(height: 1),
         Expanded(
@@ -271,16 +342,15 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
       color: AppTheme.surfaceColor,
       child: Row(
         children: [
-          const Icon(Icons.cloud_done, size: 16, color: Colors.greenAccent),
+          Icon(
+            _lastSaveTime != null ? Icons.cloud_done : Icons.cloud_off,
+            size: 16,
+            color: _lastSaveTime != null ? Colors.greenAccent : Colors.grey,
+          ),
           const SizedBox(width: 8),
           Text(
-            '自动保存开启中',
-            style: TextStyle(color: Colors.grey[600], fontSize: 12),
-          ),
-          const Spacer(),
-          Text(
             _lastSaveTime != null
-                ? '最后更新：${_formatTime(_lastSaveTime!)}'
+                ? '已保存 ${_formatTime(_lastSaveTime!)}'
                 : '尚未保存',
             style: TextStyle(color: Colors.grey[600], fontSize: 12),
           ),
@@ -291,5 +361,118 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
 
   String _formatTime(DateTime time) {
     return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+/// 导出选择面板
+class _ExportSheet extends StatelessWidget {
+  final VoidCallback onCopyText;
+
+  const _ExportSheet({required this.onCopyText});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.only(top: 16, bottom: 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              '导出到',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _PlatformTile(
+            icon: Icons.content_copy,
+            label: '复制为文本',
+            subtitle: '粘贴到任意平台',
+            color: Colors.blue,
+            onTap: onCopyText,
+          ),
+          const Divider(indent: 16, endIndent: 16),
+          _PlatformTile(
+            icon: Icons.chat,
+            label: '微信公众号',
+            subtitle: '复制内容后手动发布',
+            color: Colors.green,
+            onTap: onCopyText,
+          ),
+          _PlatformTile(
+            icon: Icons.book,
+            label: '知乎',
+            subtitle: '复制内容后手动发布',
+            color: Colors.blue,
+            onTap: onCopyText,
+          ),
+          _PlatformTile(
+            icon: Icons.alternate_email,
+            label: '微博',
+            subtitle: '复制内容后手动发布',
+            color: Colors.orange,
+            onTap: onCopyText,
+          ),
+          _PlatformTile(
+            icon: Icons.article,
+            label: '今日头条',
+            subtitle: '复制内容后手动发布',
+            color: Colors.red,
+            onTap: onCopyText,
+          ),
+          _PlatformTile(
+            icon: Icons.auto_stories,
+            label: '小红书',
+            subtitle: '复制内容后手动发布',
+            color: Colors.pink,
+            onTap: onCopyText,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlatformTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _PlatformTile({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(label),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+      trailing: const Icon(Icons.chevron_right, size: 18),
+      onTap: onTap,
+    );
   }
 }

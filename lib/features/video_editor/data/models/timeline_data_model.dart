@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 /// 时间线数据模型（用于 timeline_canvas.dart）
 /// 注意：此文件是为了解决 timeline_canvas.dart 中导入的 timeline_data_model.dart 不存在的问题
 

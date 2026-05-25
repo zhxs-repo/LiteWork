@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../viewmodel.dart';
 import '../../domain/models.dart';
 import 'note_editor_screen.dart';
+import 'trash_screen.dart';
 
 /// 笔记搜索委托
 class NotesSearchDelegate extends SearchDelegate {
@@ -104,6 +105,16 @@ class _NotesListScreenState extends State<NotesListScreen> {
       appBar: AppBar(
         title: const Text('笔记管理'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TrashScreen(),
+              ),
+            ),
+            tooltip: '回收站',
+          ),
           IconButton(
             icon: const Icon(Icons.folder_outlined),
             onPressed: () => _showFolderManagement(context),
@@ -268,6 +279,10 @@ class _NotesListScreenState extends State<NotesListScreen> {
                     onSelected: (value) => _handleMenuAction(context, note, value, viewModel),
                     itemBuilder: (context) => [
                       const PopupMenuItem(value: 'edit', child: Text('编辑')),
+                      PopupMenuItem(
+                        value: 'pin',
+                        child: Text(note.isPinned ? '取消置顶' : '置顶'),
+                      ),
                       const PopupMenuItem(value: 'favorite', child: Text('收藏')),
                       const PopupMenuItem(value: 'move', child: Text('移动到文件夹')),
                       const PopupMenuItem(value: 'delete', child: Text('删除')),
@@ -320,41 +335,10 @@ class _NotesListScreenState extends State<NotesListScreen> {
   }
 
   void _createNote(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.description, color: Colors.blue),
-              title: const Text('富文本笔记'),
-              subtitle: const Text('支持格式化文本和图片'),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToCreate(context, NoteType.richText);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.account_tree, color: Colors.purple),
-              title: const Text('思维导图'),
-              subtitle: const Text('可视化思维整理'),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToCreate(context, NoteType.mindMap);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _navigateToCreate(BuildContext context, NoteType type) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => NoteEditorScreen(createType: type),
+        builder: (context) => const NoteEditorScreen(createType: NoteType.richText),
       ),
     );
   }
@@ -373,6 +357,12 @@ class _NotesListScreenState extends State<NotesListScreen> {
       case 'edit':
         _openNote(context, note.id);
         break;
+      case 'pin':
+        viewModel.togglePin(note.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(note.isPinned ? '已取消置顶' : '已置顶')),
+        );
+        break;
       case 'favorite':
         viewModel.toggleFavorite(note.id);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -383,7 +373,10 @@ class _NotesListScreenState extends State<NotesListScreen> {
         _showMoveToFolderDialog(context, note, viewModel);
         break;
       case 'delete':
-        _confirmDelete(context, note, viewModel);
+        viewModel.moveToTrash(note);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已移动到回收站')),
+        );
         break;
     }
   }

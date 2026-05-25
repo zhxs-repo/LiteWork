@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'package:litework/features/video_editor/data/models/media_item_model.dart';
 import 'package:litework/features/video_editor/data/models/timeline_data_model.dart';
 
 /// 真实时间线画布组件
@@ -9,6 +8,7 @@ class TimelineCanvas extends StatefulWidget {
   final TimelineData timelineData;
   final Function(int segmentId) onSegmentSelected;
   final Function(double position) onSeek;
+  final Function(int segmentId, double newStartTime)? onClipMoved;
   final double zoomLevel; // 像素/秒
 
   const TimelineCanvas({
@@ -16,6 +16,7 @@ class TimelineCanvas extends StatefulWidget {
     required this.timelineData,
     required this.onSegmentSelected,
     required this.onSeek,
+    this.onClipMoved,
     this.zoomLevel = 50.0,
   }) : super(key: key);
 
@@ -24,17 +25,107 @@ class TimelineCanvas extends StatefulWidget {
 }
 
 class _TimelineCanvasState extends State<TimelineCanvas> {
-  double _currentPosition = 0.0; // 当前播放位置 (秒)
+  double _currentPosition = 0.0;
   int? _selectedSegmentId;
+  int? _draggedSegmentId;
   double _dragStartX = 0;
   double _dragStartPosition = 0;
+
+  Offset? _localToTime(double globalDx) {
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.hasSize) return null;
+    final local = renderBox.globalToLocal(Offset(globalDx, 0));
+    return local;
+  }
+
+  int? _hitTestSegment(double clickTimeSeconds) {
+    for (var track in widget.timelineData.tracks) {
+      for (var segment in track.segments) {
+        if (clickTimeSeconds >= segment.startTime &&
+            clickTimeSeconds <= segment.startTime + segment.duration) {
+          return segment.id;
+        }
+      }
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      onTapUp: (details) {
+        final renderBox = context.findRenderObject() as RenderBox?;
+        if (renderBox == null) return;
+        final localPosition = renderBox.globalToLocal(details.globalPosition);
+        final clickTime = localPosition.dx / widget.zoomLevel;
+
+        final clickedId = _hitTestSegment(clickTime);
+        if (clickedId != null) {
+          setState(() => _selectedSegmentId = clickedId);
+          widget.onSegmentSelected(clickedId);
+        } else {
+          setState(() {
+            _selectedSegmentId = null;
+            _currentPosition = math.max(0, clickTime);
+          });
+          widget.onSeek(_currentPosition);
+        }
+      },
+      onLongPressStart: (details) {
+        final renderBox = context.findRenderObject() as RenderBox?;
+        if (renderBox == null) return;
+        final localPosition = renderBox.globalToLocal(details.globalPosition);
+        final clickTime = localPosition.dx / widget.zoomLevel;
+
+        final hitId = _hitTestSegment(clickTime);
+        if (hitId != null) {
+          setState(() {
+            _draggedSegmentId = hitId;
+            _selectedSegmentId = hitId;
+            _dragStartX = details.globalPosition.dx;
+          });
+          widget.onSegmentSelected(hitId);
+        }
+      },
+      onLongPressMoveUpdate: (details) {
+        if (_draggedSegmentId == null) return;
+        final deltaX = details.globalPosition.dx - _dragStartX;
+        final deltaSeconds = deltaX / widget.zoomLevel;
+        setState(() {
+          _dragStartPosition = math.max(0, deltaSeconds);
+        });
+      },
+      onLongPressEnd: (details) {
+        if (_draggedSegmentId != null) {
+          final moved = _dragStartPosition > 0.5;
+          if (moved && widget.onClipMoved != null) {
+            final currentStart = () {
+              for (var track in widget.timelineData.tracks) {
+                for (var segment in track.segments) {
+                  if (segment.id == _draggedSegmentId) return segment.startTime;
+                }
+              }
+              return 0.0;
+            }();
+            final newStart = math.max(0.0, currentStart + _dragStartPosition);
+            widget.onClipMoved!(_draggedSegmentId!, newStart);
+          }
+        }
+        setState(() {
+          _draggedSegmentId = null;
+          _dragStartPosition = 0;
+        });
+      },
       onHorizontalDragStart: (details) {
-        _dragStartX = details.globalPosition.dx;
-        _dragStartPosition = _currentPosition;
+        final renderBox = context.findRenderObject() as RenderBox?;
+        if (renderBox == null) return;
+        final localPosition = renderBox.globalToLocal(details.globalPosition);
+        final clickTime = localPosition.dx / widget.zoomLevel;
+
+        if (_hitTestSegment(clickTime) == null) {
+          _dragStartX = details.globalPosition.dx;
+          _dragStartPosition = _currentPosition;
+        }
       },
       onHorizontalDragUpdate: (details) {
         final deltaX = details.globalPosition.dx - _dragStartX;
@@ -44,31 +135,6 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
         });
         widget.onSeek(_currentPosition);
       },
-      onTapUp: (details) {
-        // 简单的点击检测逻辑 (实际应更复杂以区分拖拽)
-        final renderBox = context.findRenderObject() as RenderBox;
-        final localPosition = renderBox.globalToLocal(details.globalPosition);
-        final clickTime = localPosition.dx / widget.zoomLevel;
-        
-        // 检测是否点击了某个片段
-        int? clickedId;
-        for (var track in widget.timelineData.tracks) {
-          for (var segment in track.segments) {
-            if (clickTime >= segment.startTime && 
-                clickTime <= segment.startTime + segment.duration) {
-              clickedId = segment.id;
-              break;
-            }
-          }
-        }
-        
-        if (clickedId != null) {
-          setState(() => _selectedSegmentId = clickedId);
-          widget.onSegmentSelected(clickedId);
-        } else {
-          setState(() => _selectedSegmentId = null);
-        }
-      },
       child: Container(
         color: Colors.grey[900],
         child: CustomPaint(
@@ -77,6 +143,8 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
             timelineData: widget.timelineData,
             currentPosition: _currentPosition,
             selectedSegmentId: _selectedSegmentId,
+            draggedSegmentId: _draggedSegmentId,
+            dragDelta: _dragStartPosition,
             zoomLevel: widget.zoomLevel,
           ),
         ),
@@ -89,12 +157,16 @@ class TimelinePainter extends CustomPainter {
   final TimelineData timelineData;
   final double currentPosition;
   final int? selectedSegmentId;
+  final int? draggedSegmentId;
+  final double dragDelta;
   final double zoomLevel;
 
   TimelinePainter({
     required this.timelineData,
     required this.currentPosition,
     required this.selectedSegmentId,
+    this.draggedSegmentId,
+    this.dragDelta = 0,
     required this.zoomLevel,
   });
 
@@ -137,15 +209,27 @@ class TimelinePainter extends CustomPainter {
 
       // 绘制片段
       for (var segment in track.segments) {
-        final x = segment.startTime * zoomLevel;
+        var x = segment.startTime * zoomLevel;
         final w = segment.duration * zoomLevel;
         final isSelected = segment.id == selectedSegmentId;
-        
+        final isDragged = segment.id == draggedSegmentId;
+
+        if (isDragged) {
+          x += dragDelta * zoomLevel;
+        }
+
         // 片段背景
         canvas.drawRect(
           Rect.fromLTWH(x, yOffset + 2, w - 2, trackHeight - 4),
-          Paint()..color = isSelected ? Colors.blue : _getTrackColor(track.type),
+          Paint()..color = isDragged ? Colors.orange : (isSelected ? Colors.blue : _getTrackColor(track.type)),
         );
+
+        if (isDragged) {
+          canvas.drawRect(
+            Rect.fromLTWH(x, yOffset + 2, w - 2, trackHeight - 4),
+            Paint()..color = Colors.white24..style = PaintingStyle.stroke..strokeWidth = 2,
+          );
+        }
 
         // 片段文本 (文件名)
         paintText.text = TextSpan(
@@ -199,6 +283,8 @@ class TimelinePainter extends CustomPainter {
   bool shouldRepaint(covariant TimelinePainter oldDelegate) {
     return oldDelegate.currentPosition != currentPosition ||
            oldDelegate.selectedSegmentId != selectedSegmentId ||
+           oldDelegate.draggedSegmentId != draggedSegmentId ||
+           oldDelegate.dragDelta != dragDelta ||
            oldDelegate.timelineData != timelineData;
   }
 }

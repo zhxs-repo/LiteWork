@@ -2,58 +2,71 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/video_provider.dart';
 
-/// 模板选择页面 - 提供一键成片模板库
-class TemplateSelectionScreen extends StatelessWidget {
-  const TemplateSelectionScreen({super.key});
+/// 快速创建项目页面
+/// 替代之前的假模板，提供自定义项目创建入口
+class QuickCreateScreen extends StatefulWidget {
+  const QuickCreateScreen({super.key});
+
+  @override
+  State<QuickCreateScreen> createState() => _QuickCreateScreenState();
+}
+
+class _QuickCreateScreenState extends State<QuickCreateScreen> {
+  final _titleController = TextEditingController(text: '新项目');
+  String _aspectRatio = '9:16';
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<VideoProvider>();
-    final templates = [
-      {'name': '生活记录', 'icon': Icons.home, 'color': Colors.orange},
-      {'name': '美食探店', 'icon': Icons.restaurant, 'color': Colors.red},
-      {'name': '知识分享', 'icon': Icons.school, 'color': Colors.blue},
-      {'name': '旅行Vlog', 'icon': Icons.flight_takeoff, 'color': Colors.teal},
-      {'name': '时尚穿搭', 'icon': Icons.checkroom, 'color': Colors.purple},
-    ];
+    final provider = context.read<VideoProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('选择模板')),
-      body: GridView.builder(
+      appBar: AppBar(title: const Text('快速创建')),
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.8,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-        ),
-        itemCount: templates.length,
-        itemBuilder: (context, index) {
-          final template = templates[index];
-          return Card(
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => provider.applyTemplate(template['name'] as String),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    template['icon'] as IconData,
-                    size: 48,
-                    color: template['color'] as Color,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    template['name'] as String,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('点击应用', style: TextStyle(color: Colors.grey)),
-                ],
-              ),
+        children: [
+          TextField(
+            controller: _titleController,
+            decoration: const InputDecoration(
+              labelText: '项目名称',
+              border: OutlineInputBorder(),
             ),
-          );
-        },
+          ),
+          const SizedBox(height: 24),
+          const Text('画面比例', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          ...['9:16 (竖屏)', '16:9 (横屏)', '1:1 (方形)'].map((label) {
+            final value = label.split(' ')[0];
+            return RadioListTile<String>(
+              title: Text(label),
+              value: value,
+              groupValue: _aspectRatio,
+              onChanged: (val) => setState(() => _aspectRatio = val!),
+            );
+          }),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton.icon(
+              icon: const Icon(Icons.add),
+              label: const Text('创建项目'),
+              onPressed: () {
+                final title = _titleController.text.trim().isEmpty
+                    ? '新项目'
+                    : _titleController.text.trim();
+                provider.createProject(title);
+                provider.setAspectRatio(_aspectRatio);
+                Navigator.pop(context);
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

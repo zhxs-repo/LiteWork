@@ -165,6 +165,17 @@ class PostProvider extends ChangeNotifier {
     }
   }
 
+  /// 更新封面图
+  void updateCoverImage(String? path) {
+    if (_currentPost != null) {
+      _currentPost = _currentPost!.copyWith(
+        coverImage: path,
+        updatedAt: DateTime.now(),
+      );
+      notifyListeners();
+    }
+  }
+
   /// 发布帖子
   Future<void> publishPost() async {
     if (_currentPost == null) return;
