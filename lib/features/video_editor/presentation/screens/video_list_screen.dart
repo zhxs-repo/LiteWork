@@ -253,36 +253,38 @@ class _VideoListScreenState extends State<VideoListScreen> {
   }
 
   void _showCreateDialog(BuildContext context) {
-    final controller = TextEditingController();
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('新建视频项目'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: '项目名称',
-            hintText: '例如：我的旅行 Vlog',
+      builder: (ctx) {
+        final controller = TextEditingController();
+        return AlertDialog(
+          title: const Text('新建视频项目'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: '项目名称',
+              hintText: '例如：我的旅行 Vlog',
+            ),
+            autofocus: true,
           ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                final provider = context.read<VideoProvider>();
-                provider.createProject(controller.text);
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('创建'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (controller.text.isNotEmpty) {
+                  final provider = context.read<VideoProvider>();
+                  provider.createProject(controller.text);
+                  Navigator.pop(ctx);
+                }
+              },
+              child: const Text('创建'),
+            ),
+          ],
+        );
+      },
     );
   }
 

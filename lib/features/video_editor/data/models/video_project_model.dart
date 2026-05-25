@@ -2,6 +2,7 @@
 class VideoProject {
   final String id;
   final String title;
+  final String? description;
   final List<String> mediaPaths;
   final Duration? duration;
   final DateTime createdAt;
@@ -11,6 +12,7 @@ class VideoProject {
   VideoProject({
     required this.id,
     required this.title,
+    this.description,
     this.mediaPaths = const [],
     this.duration,
     required this.createdAt,
@@ -21,6 +23,7 @@ class VideoProject {
   Map<String, dynamic> toMap() => {
         'id': id,
         'title': title,
+        'description': description,
         'mediaPaths': mediaPaths,
         'duration': duration?.inSeconds,
         'createdAt': createdAt.toIso8601String(),
@@ -31,6 +34,7 @@ class VideoProject {
   factory VideoProject.fromMap(Map<String, dynamic> map) => VideoProject(
         id: map['id'] as String,
         title: map['title'] as String,
+        description: map['description'] as String?,
         mediaPaths: List<String>.from(map['mediaPaths'] ?? []),
         duration: map['duration'] != null
             ? Duration(seconds: map['duration'] as int)

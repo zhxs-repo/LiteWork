@@ -383,77 +383,79 @@ class _NotesListScreenState extends State<NotesListScreen> {
 
   void _showFolderManagement(BuildContext context) {
     final viewModel = context.read<NotesViewModel>();
-    final controller = TextEditingController();
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('文件夹管理'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: '新建文件夹',
-                hintText: '输入文件夹名称',
-              ),
-              onSubmitted: (value) {
-                if (value.isNotEmpty) {
-                  viewModel.createFolder(value);
-                  Navigator.of(context).pop();
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            const Text('现有文件夹:', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Expanded(
-              child: Consumer<NotesViewModel>(
-                builder: (context, viewModel, _) {
-                  final folders = viewModel.folders;
-                  if (folders.isEmpty) {
-                    return const Text('暂无文件夹');
+      builder: (context) {
+        final controller = TextEditingController();
+        return AlertDialog(
+          title: const Text('文件夹管理'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: '新建文件夹',
+                  hintText: '输入文件夹名称',
+                ),
+                onSubmitted: (value) {
+                  if (value.isNotEmpty) {
+                    viewModel.createFolder(value);
+                    Navigator.of(context).pop();
                   }
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: folders.length,
-                    itemBuilder: (context, index) {
-                      final folder = folders[index];
-                      return ListTile(
-                        leading: const Icon(Icons.folder),
-                        title: Text(folder.name),
-                        subtitle: Text('${folder.noteCount} 篇笔记'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () {
-                            viewModel.deleteFolder(folder.id);
-                          },
-                        ),
-                      );
-                    },
-                  );
                 },
               ),
+              const SizedBox(height: 16),
+              const Text('现有文件夹:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Expanded(
+                child: Consumer<NotesViewModel>(
+                  builder: (context, viewModel, _) {
+                    final folders = viewModel.folders;
+                    if (folders.isEmpty) {
+                      return const Text('暂无文件夹');
+                    }
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: folders.length,
+                      itemBuilder: (context, index) {
+                        final folder = folders[index];
+                        return ListTile(
+                          leading: const Icon(Icons.folder),
+                          title: Text(folder.name),
+                          subtitle: Text('${folder.noteCount} 篇笔记'),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            onPressed: () {
+                              viewModel.deleteFolder(folder.id);
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('关闭'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (controller.text.isNotEmpty) {
+                  viewModel.createFolder(controller.text);
+                  controller.clear();
+                }
+              },
+              child: const Text('创建'),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('关闭'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                viewModel.createFolder(controller.text);
-                controller.clear();
-              }
-            },
-            child: const Text('创建'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

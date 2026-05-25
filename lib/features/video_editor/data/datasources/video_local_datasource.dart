@@ -15,9 +15,24 @@ class VideoLocalDataSource {
 
   /// 初始化数据源
   Future<void> init() async {
-    _projectBox = await Hive.openBox<Map>(projectBoxName);
-    _mediaBox = await Hive.openBox<Map>(mediaBoxName);
-    _clipsBox = await Hive.openBox<Map>(clipsBoxName);
+    // 确保 Hive 已初始化
+    if (!Hive.isBoxOpen(projectBoxName)) {
+      _projectBox = await Hive.openBox<Map>(projectBoxName);
+    } else {
+      _projectBox = Hive.box<Map>(projectBoxName);
+    }
+    
+    if (!Hive.isBoxOpen(mediaBoxName)) {
+      _mediaBox = await Hive.openBox<Map>(mediaBoxName);
+    } else {
+      _mediaBox = Hive.box<Map>(mediaBoxName);
+    }
+    
+    if (!Hive.isBoxOpen(clipsBoxName)) {
+      _clipsBox = await Hive.openBox<Map>(clipsBoxName);
+    } else {
+      _clipsBox = Hive.box<Map>(clipsBoxName);
+    }
   }
 
   // ==================== Project CRUD ====================

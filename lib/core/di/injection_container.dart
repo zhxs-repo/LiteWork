@@ -9,6 +9,15 @@ import '../../features/base/domain/usecases/user_usecases.dart';
 
 import '../../features/video_editor/presentation/providers/video_provider.dart';
 import '../../features/notes/presentation/viewmodel.dart';
+import '../../features/notes/data/note_datasource.dart';
+import '../../features/notes/data/datasources/trash_datasource.dart';
+import '../../features/notes/data/repositories/notes_repository_impl.dart';
+import '../../features/notes/domain/repositories/notes_repository.dart';
+import '../../features/notes/domain/usecases/get_notes_use_case.dart';
+import '../../features/notes/domain/usecases/save_note_use_case.dart';
+import '../../features/notes/domain/usecases/delete_note_use_case.dart';
+import '../../features/notes/domain/usecases/move_note_to_trash_use_case.dart';
+import '../../features/notes/domain/usecases/restore_from_trash_use_case.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -48,8 +57,39 @@ Future<void> initDependencies() async {
     ),
   );
 
-  // Notes
-  sl.registerFactory<NotesViewModel>(() => NotesViewModel());
+  // Notes - Data Sources
+  sl.registerLazySingleton<NotesDataSource>(() => NotesDataSource());
+  sl.registerLazySingleton<TrashDataSource>(() => TrashDataSource());
+
+  // Notes - Repository
+  sl.registerLazySingleton<NotesRepository>(
+    () => NotesRepositoryImpl(
+      localDataSource: sl<NotesDataSource>(),
+      trashDataSource: sl<TrashDataSource>(),
+    ),
+  );
+
+  // Notes - Use Cases
+  sl.registerLazySingleton<GetNotesUseCase>(() => GetNotesUseCase(sl()));
+  sl.registerLazySingleton<SaveNoteUseCase>(() => SaveNoteUseCase(sl()));
+  sl.registerLazySingleton<DeleteNoteUseCase>(() => DeleteNoteUseCase(sl()));
+  sl.registerLazySingleton<MoveNoteToTrashUseCase>(
+    () => MoveNoteToTrashUseCase(sl()),
+  );
+  sl.registerLazySingleton<RestoreFromTrashUseCase>(
+    () => RestoreFromTrashUseCase(sl()),
+  );
+
+  // Notes - Provider (updated to use UseCases)
+  sl.registerFactory<NotesViewModel>(
+    () => NotesViewModel(
+      getNotesUseCase: sl(),
+      saveNoteUseCase: sl(),
+      deleteNoteUseCase: sl(),
+      moveNoteToTrashUseCase: sl(),
+      restoreFromTrashUseCase: sl(),
+    ),
+  );
 
   // Video Editor
   sl.registerFactory<VideoProvider>(() => VideoProvider());

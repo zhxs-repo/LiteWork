@@ -35,7 +35,8 @@ dependencies:
   video_player: ^2.9.2
   chewie: ^1.7.0
   image_picker: ^1.0.0
-  # ffmpeg_kit_flutter: ^6.0.3  # 已弃用，Maven 仓库不可用
+  # 视频处理 - 使用轻量级版本，功能不足时再升级至 full_gpl
+  ffmpeg_kit_flutter_video: ^6.0.3
   path_provider: ^2.1.4
   camera: ^0.12.0+1
   
@@ -47,6 +48,12 @@ dependencies:
   
   # 响应式编程
   rxdart: ^0.28.0
+  
+  # 函数式编程 (Either 模式)
+  dartz: ^0.10.1
+  
+  # 值对象比较
+  equatable: ^2.0.5
   
   # 图片缓存
   cached_network_image: ^3.3.0

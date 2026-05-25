@@ -64,8 +64,8 @@ String generateUniqueId() {
 }
 
 String _generateRandomString(int length) {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  final random = Random();
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  final random = Random.secure();
   return String.fromCharCodes(
     Iterable.generate(
       length,

@@ -138,7 +138,7 @@ class PostProvider extends ChangeNotifier {
 
       // 重置状态（使用 addPostFrameCallback 避免 dispose 后调用）
       Future.delayed(const Duration(seconds: 1), () {
-        if (hasListeners && _state == EditorState.saved) {
+        if (!_disposed && hasListeners && _state == EditorState.saved) {
           _state = EditorState.idle;
           notifyListeners();
         }
@@ -211,5 +211,12 @@ class PostProvider extends ChangeNotifier {
   void clearCurrent() {
     _currentPost = null;
     notifyListeners();
+  }
+
+  bool _disposed = false;
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

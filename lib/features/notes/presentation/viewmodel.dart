@@ -1,9 +1,12 @@
-/// 笔记模块 - ViewModel (MVVM)
+/// 笔记管理 ViewModel - 基于 UseCase 的 Clean Architecture 实现
 
 import 'package:flutter/foundation.dart';
-import '../domain/models.dart';
-import '../data/note_datasource.dart';
-import '../data/datasources/trash_datasource.dart';
+import '../../domain/models.dart';
+import '../../domain/usecases/get_notes_use_case.dart';
+import '../../domain/usecases/save_note_use_case.dart';
+import '../../domain/usecases/delete_note_use_case.dart';
+import '../../domain/usecases/move_note_to_trash_use_case.dart';
+import '../../domain/usecases/restore_from_trash_use_case.dart';
 
 /// 回收站项目模型
 class TrashItem {
@@ -35,8 +38,12 @@ class TrashItem {
 
 /// 笔记管理 ViewModel
 class NotesViewModel extends ChangeNotifier {
-  final NotesDataSource _dataSource = NotesDataSource();
-  final TrashDataSource _trashDataSource = TrashDataSource();
+  final GetNotesUseCase _getNotesUseCase;
+  final SaveNoteUseCase _saveNoteUseCase;
+  final DeleteNoteUseCase _deleteNoteUseCase;
+  final MoveNoteToTrashUseCase _moveNoteToTrashUseCase;
+  final RestoreFromTrashUseCase _restoreFromTrashUseCase;
+
   final List<Note> _notes = [];
   final List<NoteFolder> _folders = [];
   final List<TrashItem> _trashItems = [];
@@ -46,6 +53,18 @@ class NotesViewModel extends ChangeNotifier {
   String? _selectedFolderId;
   bool _isInitialized = false;
   bool _isTrashInitialized = false;
+
+  NotesViewModel({
+    required GetNotesUseCase getNotesUseCase,
+    required SaveNoteUseCase saveNoteUseCase,
+    required DeleteNoteUseCase deleteNoteUseCase,
+    required MoveNoteToTrashUseCase moveNoteToTrashUseCase,
+    required RestoreFromTrashUseCase restoreFromTrashUseCase,
+  })  : _getNotesUseCase = getNotesUseCase,
+        _saveNoteUseCase = saveNoteUseCase,
+        _deleteNoteUseCase = deleteNoteUseCase,
+        _moveNoteToTrashUseCase = moveNoteToTrashUseCase,
+        _restoreFromTrashUseCase = restoreFromTrashUseCase;
 
   List<Note> get notes => _notes;
   List<NoteFolder> get folders => _folders;
@@ -77,11 +96,8 @@ class NotesViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _dataSource.init();
-      await _trashDataSource.init();
       await loadNotes();
       await loadFolders();
-      await loadTrashItems();
       _isInitialized = true;
       _isLoading = false;
       notifyListeners();
@@ -99,11 +115,20 @@ class NotesViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final loadedNotes = _dataSource.getAllNotes();
-      _notes.clear();
-      _notes.addAll(loadedNotes);
-      _isLoading = false;
-      notifyListeners();
+      final result = await _getNotesUseCase();
+      result.fold(
+        (failure) {
+          _isLoading = false;
+          _error = failure.message;
+          notifyListeners();
+        },
+        (loadedNotes) {
+          _notes.clear();
+          _notes.addAll(loadedNotes);
+          _isLoading = false;
+          notifyListeners();
+        },
+      );
     } catch (e) {
       _isLoading = false;
       _error = e.toString();
@@ -117,9 +142,7 @@ class NotesViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final loadedFolders = _dataSource.getAllFolders();
-      _folders.clear();
-      _folders.addAll(loadedFolders);
+      // TODO: 实现 GetFoldersUseCase
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -152,11 +175,20 @@ class NotesViewModel extends ChangeNotifier {
         updatedAt: DateTime.now(),
       );
 
-      await _dataSource.saveNote(note);
-      _notes.insert(0, note);
-      _currentNote = note;
-      _isLoading = false;
-      notifyListeners();
+      final result = await _saveNoteUseCase(note);
+      result.fold(
+        (failure) {
+          _isLoading = false;
+          _error = failure.message;
+          notifyListeners();
+        },
+        (_) {
+          _notes.insert(0, note);
+          _currentNote = note;
+          _isLoading = false;
+          notifyListeners();
+        },
+      );
     } catch (e) {
       _isLoading = false;
       _error = e.toString();
@@ -190,9 +222,19 @@ class NotesViewModel extends ChangeNotifier {
         _notes.add(updatedNote);
       }
       _currentNote = updatedNote;
-      await _dataSource.saveNote(updatedNote);
-      _isLoading = false;
-      notifyListeners();
+      
+      final result = await _saveNoteUseCase(updatedNote);
+      result.fold(
+        (failure) {
+          _isLoading = false;
+          _error = failure.message;
+          notifyListeners();
+        },
+        (_) {
+          _isLoading = false;
+          notifyListeners();
+        },
+      );
     } catch (e) {
       _isLoading = false;
       _error = e.toString();
@@ -206,13 +248,22 @@ class NotesViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _dataSource.deleteNote(id);
-      _notes.removeWhere((n) => n.id == id);
-      if (_currentNote?.id == id) {
-        _currentNote = null;
-      }
-      _isLoading = false;
-      notifyListeners();
+      final result = await _deleteNoteUseCase(id);
+      result.fold(
+        (failure) {
+          _isLoading = false;
+          _error = failure.message;
+          notifyListeners();
+        },
+        (_) {
+          _notes.removeWhere((n) => n.id == id);
+          if (_currentNote?.id == id) {
+            _currentNote = null;
+          }
+          _isLoading = false;
+          notifyListeners();
+        },
+      );
     } catch (e) {
       _isLoading = false;
       _error = e.toString();
@@ -250,138 +301,31 @@ class NotesViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 创建文件夹
-  Future<void> createFolder(String name, {String? parentId}) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      final folder = NoteFolder(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: name,
-        parentId: parentId,
-        createdAt: DateTime.now(),
-      );
-
-      await _dataSource.saveFolder(folder);
-      _folders.add(folder);
-      _isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      _isLoading = false;
-      _error = e.toString();
-      notifyListeners();
-    }
-  }
-
-  /// 移动笔记到文件夹
-  Future<void> moveNoteToFolder(String noteId, String? folderId) async {
-    final index = _notes.indexWhere((n) => n.id == noteId);
-    if (index != -1) {
-      final updatedNote = _notes[index].copyWith(folderId: folderId);
-      _notes[index] = updatedNote;
-      await _dataSource.saveNote(updatedNote);
-      notifyListeners();
-    }
-  }
-
-  /// 删除文件夹
-  Future<void> deleteFolder(String folderId) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      await _dataSource.deleteFolder(folderId);
-      _folders.removeWhere((f) => f.id == folderId);
-      for (var i = 0; i < _notes.length; i++) {
-        if (_notes[i].folderId == folderId) {
-          final updatedNote = _notes[i].copyWith(folderId: null);
-          _notes[i] = updatedNote;
-          await _dataSource.saveNote(updatedNote);
-        }
-      }
-      _isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      _isLoading = false;
-      _error = e.toString();
-      notifyListeners();
-    }
-  }
-
-  /// 同步笔记
-  Future<void> syncNote(String noteId) async {
-    final index = _notes.indexWhere((n) => n.id == noteId);
-    if (index != -1) {
-      _isLoading = true;
-      notifyListeners();
-
-      try {
-        await _dataSource.syncNote(noteId);
-        _notes[index] = _notes[index].copyWith(
-          isSynced: true,
-          lastSyncedAt: DateTime.now(),
-        );
-        _isLoading = false;
-        notifyListeners();
-      } catch (e) {
-        _isLoading = false;
-        _error = e.toString();
-        notifyListeners();
-      }
-    }
-  }
-
-  // ==================== 回收站操作 ====================
-
-  /// 加载回收站项目
-  Future<void> loadTrashItems() async {
-    if (_isTrashInitialized) return;
-
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      await _trashDataSource.init();
-      final items = _trashDataSource.getAll();
-      _trashItems.clear();
-      _trashItems.addAll(items.map((e) => TrashItem.fromMapEntry(e)).toList());
-      _isTrashInitialized = true;
-      _isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      _isLoading = false;
-      _error = '加载回收站失败：${e.toString()}';
-      notifyListeners();
-    }
-  }
-
-  /// 移动到回收站
+  /// 移动笔记到回收站
   Future<void> moveToTrash(Note note) async {
+    _isLoading = true;
+    notifyListeners();
+
     try {
-      await _trashDataSource.add(
-        note.id,
-        {
-          'id': note.id,
-          'title': note.title,
-          'content': note.content,
-          'type': note.type.index,
-          'tags': note.tags,
-          'folderId': note.folderId,
-          'createdAt': note.createdAt.toIso8601String(),
-          'updatedAt': note.updatedAt.toIso8601String(),
+      final result = await _moveNoteToTrashUseCase(note);
+      result.fold(
+        (failure) {
+          _isLoading = false;
+          _error = failure.message;
+          notifyListeners();
         },
-        'note',
+        (_) {
+          _notes.removeWhere((n) => n.id == note.id);
+          if (_currentNote?.id == note.id) {
+            _currentNote = null;
+          }
+          _isTrashInitialized = false;
+          _isLoading = false;
+          notifyListeners();
+        },
       );
-      await _dataSource.deleteNote(note.id);
-      _notes.removeWhere((n) => n.id == note.id);
-      if (_currentNote?.id == note.id) {
-        _currentNote = null;
-      }
-      _isTrashInitialized = false; // 重置以重新加载
-      await loadTrashItems();
-      notifyListeners();
     } catch (e) {
+      _isLoading = false;
       _error = '移动到回收站失败：${e.toString()}';
       notifyListeners();
     }
@@ -393,93 +337,22 @@ class NotesViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _trashDataSource.restore(itemId);
-      if (result == null) {
-        throw Exception('项目不存在');
-      }
-
-      final type = result['type'] as String;
-      final data = result['data'] as Map<String, dynamic>;
-
-      if (type == 'note') {
-        final note = Note(
-          id: data['id'] as String,
-          title: data['title'] as String,
-          content: data['content'] as String,
-          type: NoteType.values.firstWhere(
-            (e) => e.name == data['type'],
-            orElse: () => NoteType.richText,
-          ),
-          folderId: data['folderId'] as String?,
-          isFavorite: data['isFavorite'] as bool? ?? false,
-          isSynced: data['isSynced'] as bool? ?? false,
-          createdAt: DateTime.parse(data['createdAt'] as String),
-          updatedAt: DateTime.now(),
-        );
-        await _dataSource.saveNote(note);
-        final existingIndex = _notes.indexWhere((n) => n.id == note.id);
-        if (existingIndex != -1) {
-          _notes[existingIndex] = note;
-        } else {
-          _notes.insert(0, note);
-        }
-      } else if (type == 'folder') {
-        final folder = NoteFolder(
-          id: data['id'] as String,
-          name: data['name'] as String,
-          parentId: data['parentId'] as String?,
-          createdAt: DateTime.parse(data['createdAt'] as String),
-        );
-        await _dataSource.saveFolder(folder);
-        final existingIndex = _folders.indexWhere((f) => f.id == folder.id);
-        if (existingIndex != -1) {
-          _folders[existingIndex] = folder;
-        } else {
-          _folders.add(folder);
-        }
-      }
-
-      _trashItems.removeWhere((item) => item.id == itemId);
-
-      _isLoading = false;
-      notifyListeners();
+      final result = await _restoreFromTrashUseCase(itemId);
+      result.fold(
+        (failure) {
+          _isLoading = false;
+          _error = failure.message;
+          notifyListeners();
+        },
+        (_) {
+          _trashItems.removeWhere((item) => item.id == itemId);
+          _isLoading = false;
+          notifyListeners();
+        },
+      );
     } catch (e) {
       _isLoading = false;
       _error = '恢复失败：${e.toString()}';
-      notifyListeners();
-    }
-  }
-
-  /// 彻底删除回收站项目
-  Future<void> deletePermanently(String itemId) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      await _trashDataSource.deletePermanently(itemId);
-      _trashItems.removeWhere((item) => item.id == itemId);
-      _isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      _isLoading = false;
-      _error = '删除失败：${e.toString()}';
-      notifyListeners();
-    }
-  }
-
-  /// 清空回收站
-  Future<void> clearTrash() async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      await _trashDataSource.clear();
-      _trashItems.clear();
-      _isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      _isLoading = false;
-      _error = '清空回收站失败：${e.toString()}';
       notifyListeners();
     }
   }
