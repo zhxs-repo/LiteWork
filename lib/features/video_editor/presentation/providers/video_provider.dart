@@ -146,10 +146,40 @@ class VideoProvider extends ChangeNotifier {
 
       final original = _projects.firstWhere((p) => p.id == id);
       final newId = DateTime.now().millisecondsSinceEpoch.toString();
+
+      // 从数据库加载原始项目的 clips
+      final originalClips = await _dataSource.getClipsForProject(id);
+      for (final clip in originalClips) {
+        final newClip = TimelineClip(
+          id: '${newId}_${clip.id}',
+          projectId: newId,
+          mediaId: clip.mediaId,
+          trackIndex: clip.trackIndex,
+          startTimeMs: clip.startTimeMs,
+          endTimeMs: clip.endTimeMs,
+          durationMs: clip.durationMs,
+          positionMs: clip.positionMs,
+          trimStartMs: clip.trimStartMs,
+          trimEndMs: clip.trimEndMs,
+          speed: clip.speed,
+          isReversed: clip.isReversed,
+          effects: clip.effects,
+        );
+        await _dataSource.saveClip(newClip);
+      }
+
+      final domainClips = originalClips.map((c) => domain.VideoClip(
+        id: '${newId}_${c.id}',
+        sourcePath: '',
+        startTime: Duration(milliseconds: c.startTimeMs),
+        endTime: Duration(milliseconds: c.endTimeMs),
+        duration: Duration(milliseconds: c.durationMs),
+      )).toList();
+
       final newProject = domain.VideoProject(
         id: newId,
         title: '${original.title} (副本)',
-        clips: original.clips,
+        clips: domainClips,
         status: domain.ProjectStatus.draft,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -159,8 +189,8 @@ class VideoProvider extends ChangeNotifier {
       final dataProject = data.VideoProject(
         id: newId,
         title: newProject.title,
-        mediaPaths: original.clips.map((c) => c.sourcePath).toList(),
-        duration: original.clips.fold<Duration>(
+        mediaPaths: domainClips.map((c) => c.sourcePath).toList(),
+        duration: domainClips.fold<Duration>(
           Duration.zero,
           (total, clip) => total + clip.duration,
         ),
@@ -198,17 +228,35 @@ class VideoProvider extends ChangeNotifier {
 
       final dataProject = await _dataSource.getProjectById(projectId);
       if (dataProject != null) {
+        final clipsData = await _dataSource.getClipsForProject(projectId);
+        _clips = clipsData;
+
+        final domainClips = _clips.map((tc) {
+          final media = _availableMedia.firstWhere(
+            (m) => m.id == tc.mediaId,
+            orElse: () => MediaItem(id: '', path: '', type: MediaType.image, durationMs: 0, createdAt: DateTime.now()),
+          );
+          return domain.VideoClip(
+            id: tc.id,
+            sourcePath: media.path,
+            startTime: Duration(milliseconds: tc.startTimeMs),
+            endTime: Duration(milliseconds: tc.endTimeMs),
+            duration: Duration(milliseconds: tc.durationMs),
+          );
+        }).toList();
+
+        final maxDuration = _clips.fold<int>(
+          0, (max, c) => (c.positionMs + c.durationMs) > max ? (c.positionMs + c.durationMs) : max);
+
         _currentProject = domain.VideoProject(
           id: dataProject.id,
           title: dataProject.title,
-          clips: [],
-          status: domain.ProjectStatus.draft,
+          clips: domainClips,
+          status: domain.ProjectStatus.editing,
+          totalDuration: Duration(milliseconds: maxDuration),
           createdAt: dataProject.createdAt,
           updatedAt: dataProject.updatedAt,
         );
-
-        final clipsData = await _dataSource.getClipsForProject(projectId);
-        _clips = clipsData;
       }
 
       _isLoading = false;

@@ -5,7 +5,7 @@ class TrashDataSource {
   static const String _boxName = 'trash_box';
   late Box<Map> _box;
 
-  Future<void> init() async {
+  void init() {
     _box = Hive.box<Map>(_boxName);
   }
 

@@ -1,65 +1,53 @@
-import 'package:dart_quill_delta/dart_quill_delta.dart';
-import '../../../../core/storage/storage_manager.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../models/post_document_model.dart';
 
-/// 帖子本地数据源
+/// 帖子本地数据源 - Hive 实现
 class PostLocalDataSource {
-  final StorageManager _storageManager;
+  static const String _boxName = 'posts_box';
+  late Box<Map> _postsBox;
+
   static const String _postsKey = 'posts';
 
-  PostLocalDataSource({required StorageManager storageManager})
-      : _storageManager = storageManager;
+  PostLocalDataSource();
+
+  /// 初始化数据源
+  void init() {
+    _postsBox = Hive.box<Map>(_boxName);
+  }
 
   /// 获取所有帖子
   Future<List<PostDocumentModel>> getAllPosts() async {
-    final postsJson = _storageManager.get<List>(_postsKey);
-    if (postsJson == null) return [];
-    
-    return (postsJson as List)
-        .map((json) => PostDocumentModel.fromJson(json as Map<String, dynamic>))
-        .toList();
+    return _postsBox.values.map((data) {
+      return PostDocumentModel.fromJson(Map<String, dynamic>.from(data));
+    }).toList();
   }
 
   /// 根据 ID 获取帖子
   Future<PostDocumentModel?> getPostById(String id) async {
-    final posts = await getAllPosts();
-    try {
-      return posts.firstWhere((post) => post.id == id);
-    } catch (e) {
-      return null;
-    }
+    final data = _postsBox.get(id);
+    if (data == null) return null;
+    return PostDocumentModel.fromJson(Map<String, dynamic>.from(data));
   }
 
   /// 保存或更新帖子
   Future<void> savePost(PostDocumentModel post) async {
-    final posts = await getAllPosts();
-    final index = posts.indexWhere((p) => p.id == post.id);
-    
-    if (index >= 0) {
-      posts[index] = post;
-    } else {
-      posts.add(post);
-    }
-    
-    await _storageManager.save(_postsKey, posts.map((p) => p.toJson()).toList());
+    await _postsBox.put(post.id, Map<String, dynamic>.from(post.toJson()));
   }
 
   /// 删除帖子
   Future<void> deletePost(String id) async {
-    final posts = await getAllPosts();
-    posts.removeWhere((post) => post.id == id);
-    await _storageManager.save(_postsKey, posts.map((p) => p.toJson()).toList());
+    await _postsBox.delete(id);
   }
 
   /// 获取草稿列表
   Future<List<PostDocumentModel>> getDrafts() async {
-    final posts = await getAllPosts();
-    return posts.where((p) => p.status == PostStatus.draft).toList();
+    return getAllPosts().then((posts) =>
+        posts.where((p) => p.status == PostStatus.draft).toList());
   }
 
   /// 获取已发布列表
   Future<List<PostDocumentModel>> getPublished() async {
-    final posts = await getAllPosts();
-    return posts.where((p) => p.status == PostStatus.published).toList();
+    return getAllPosts().then((posts) =>
+        posts.where((p) => p.status == PostStatus.published).toList());
   }
 }

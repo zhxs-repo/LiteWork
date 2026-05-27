@@ -1,12 +1,13 @@
 /// 笔记管理 ViewModel - 基于 UseCase 的 Clean Architecture 实现
 
 import 'package:flutter/foundation.dart';
-import '../../domain/models.dart';
-import '../../domain/usecases/get_notes_use_case.dart';
-import '../../domain/usecases/save_note_use_case.dart';
-import '../../domain/usecases/delete_note_use_case.dart';
-import '../../domain/usecases/move_note_to_trash_use_case.dart';
-import '../../domain/usecases/restore_from_trash_use_case.dart';
+import '../domain/models.dart';
+import '../domain/usecases/get_notes_use_case.dart';
+import '../domain/usecases/save_note_use_case.dart';
+import '../domain/usecases/delete_note_use_case.dart';
+import '../domain/usecases/move_note_to_trash_use_case.dart';
+import '../domain/usecases/restore_from_trash_use_case.dart';
+import '../domain/usecases/get_folders_use_case.dart';
 
 /// 回收站项目模型
 class TrashItem {
@@ -43,6 +44,7 @@ class NotesViewModel extends ChangeNotifier {
   final DeleteNoteUseCase _deleteNoteUseCase;
   final MoveNoteToTrashUseCase _moveNoteToTrashUseCase;
   final RestoreFromTrashUseCase _restoreFromTrashUseCase;
+  final GetFoldersUseCase _getFoldersUseCase;
 
   final List<Note> _notes = [];
   final List<NoteFolder> _folders = [];
@@ -60,11 +62,13 @@ class NotesViewModel extends ChangeNotifier {
     required DeleteNoteUseCase deleteNoteUseCase,
     required MoveNoteToTrashUseCase moveNoteToTrashUseCase,
     required RestoreFromTrashUseCase restoreFromTrashUseCase,
+    required GetFoldersUseCase getFoldersUseCase,
   })  : _getNotesUseCase = getNotesUseCase,
         _saveNoteUseCase = saveNoteUseCase,
         _deleteNoteUseCase = deleteNoteUseCase,
         _moveNoteToTrashUseCase = moveNoteToTrashUseCase,
-        _restoreFromTrashUseCase = restoreFromTrashUseCase;
+        _restoreFromTrashUseCase = restoreFromTrashUseCase,
+        _getFoldersUseCase = getFoldersUseCase;
 
   List<Note> get notes => _notes;
   List<NoteFolder> get folders => _folders;
@@ -142,9 +146,20 @@ class NotesViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // TODO: 实现 GetFoldersUseCase
-      _isLoading = false;
-      notifyListeners();
+      final result = await _getFoldersUseCase();
+      result.fold(
+        (failure) {
+          _isLoading = false;
+          _error = failure.message;
+          notifyListeners();
+        },
+        (folders) {
+          _folders.clear();
+          _folders.addAll(folders);
+          _isLoading = false;
+          notifyListeners();
+        },
+      );
     } catch (e) {
       _isLoading = false;
       _error = e.toString();
@@ -272,7 +287,7 @@ class NotesViewModel extends ChangeNotifier {
   }
 
   /// 切换置顶状态
-  void togglePin(String noteId) {
+  Future<void> togglePin(String noteId) async {
     final index = _notes.indexWhere((n) => n.id == noteId);
     if (index != -1) {
       _notes[index] = _notes[index].copyWith(isPinned: !_notes[index].isPinned);
@@ -280,11 +295,12 @@ class NotesViewModel extends ChangeNotifier {
         _currentNote = _notes[index];
       }
       notifyListeners();
+      await _saveNoteUseCase(_notes[index]);
     }
   }
 
   /// 切换收藏状态
-  void toggleFavorite(String noteId) {
+  Future<void> toggleFavorite(String noteId) async {
     final index = _notes.indexWhere((n) => n.id == noteId);
     if (index != -1) {
       _notes[index] = _notes[index].copyWith(isFavorite: !_notes[index].isFavorite);
@@ -292,6 +308,7 @@ class NotesViewModel extends ChangeNotifier {
         _currentNote = _notes[index];
       }
       notifyListeners();
+      await _saveNoteUseCase(_notes[index]);
     }
   }
 
@@ -361,5 +378,89 @@ class NotesViewModel extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  /// 创建文件夹
+  Future<void> createFolder(String name) async {
+    try {
+      final folder = NoteFolder(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: name,
+        createdAt: DateTime.now(),
+      );
+      final result = await _getFoldersUseCase.repository.saveFolder(folder);
+      result.fold(
+        (failure) {
+          _error = failure.message;
+          notifyListeners();
+        },
+        (_) {
+          _folders.add(folder);
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  /// 删除文件夹
+  Future<void> deleteFolder(String folderId) async {
+    try {
+      final repo = _getFoldersUseCase.repository;
+      final result = await repo.deleteFolder(folderId);
+      result.fold(
+        (failure) {
+          _error = failure.message;
+          notifyListeners();
+        },
+        (_) {
+          _folders.removeWhere((f) => f.id == folderId);
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  /// 移动笔记到文件夹
+  Future<void> moveNoteToFolder(String noteId, String? folderId) async {
+    final index = _notes.indexWhere((n) => n.id == noteId);
+    if (index != -1) {
+      _notes[index] = _notes[index].copyWith(folderId: folderId);
+      if (_currentNote?.id == noteId) {
+        _currentNote = _notes[index];
+      }
+      notifyListeners();
+      await _saveNoteUseCase(_notes[index]);
+    }
+  }
+
+  /// 清空回收站
+  Future<void> clearTrash() async {
+    try {
+      await _moveNoteToTrashUseCase.repository.clearTrash();
+      _trashItems.clear();
+      _isTrashInitialized = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  /// 彻底删除回收站项目
+  Future<void> deletePermanently(String itemId) async {
+    try {
+      await _restoreFromTrashUseCase.repository.deletePermanently(itemId);
+      _trashItems.removeWhere((item) => item.id == itemId);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
   }
 }

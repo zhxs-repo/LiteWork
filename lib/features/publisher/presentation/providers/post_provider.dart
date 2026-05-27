@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:dart_quill_delta/dart_quill_delta.dart';
 import '../../domain/usecases/post_usecases.dart';
@@ -213,9 +214,19 @@ class PostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Timer? _autoSaveTimer;
+
+  void scheduleAutoSave() {
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(const Duration(seconds: 3), () {
+      autoSave();
+    });
+  }
+
   bool _disposed = false;
   @override
   void dispose() {
+    _autoSaveTimer?.cancel();
     _disposed = true;
     super.dispose();
   }

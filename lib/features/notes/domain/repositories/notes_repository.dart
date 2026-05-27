@@ -34,6 +34,12 @@ abstract class NotesRepository {
   
   /// 从回收站恢复
   Future<Either<Failure, Unit>> restoreFromTrash(String itemId);
+
+  /// 清空回收站
+  Future<Either<Failure, Unit>> clearTrash();
+
+  /// 彻底删除回收站项目
+  Future<Either<Failure, Unit>> deletePermanently(String itemId);
   
   /// 同步笔记
   Future<Either<Failure, Unit>> syncNote(String noteId);

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:provider/provider.dart';
+import '../../../../core/components/quill_embed_builders.dart';
 import '../viewmodel.dart';
 import '../../domain/models.dart';
 import 'mind_map_editor_screen.dart';
@@ -145,6 +146,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     controller: _controller,
                     focusNode: _focusNode,
                     scrollController: ScrollController(),
+                    config: const quill.QuillEditorConfig(
+                      embedBuilders: [QuillImageEmbedBuilder()],
+                    ),
                   ),
                 ),
               ),

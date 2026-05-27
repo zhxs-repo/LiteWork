@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../features/base/presentation/providers/user_provider.dart';
 import '../../features/base/presentation/screens/profile_screen.dart';
 import '../../features/publisher/presentation/screens/post_list_screen.dart';
 import '../../features/publisher/presentation/screens/post_editor_screen.dart';
@@ -16,6 +17,7 @@ import '../../features/notes/domain/models.dart';
 import '../search/search_screen.dart';
 import '../../features/video_editor/presentation/screens/video_list_screen.dart';
 import '../../features/video_editor/presentation/screens/video_editor_screen.dart';
+import '../di/injection_container.dart' as di;
 
 /// 路由路径常量
 class AppRoutes {
@@ -35,27 +37,21 @@ class AppRoutes {
   static const String trash = '/trash';
 }
 
-/// 简单的认证检查 (实际项目中应从 UserProvider 获取真实状态)
-bool _isLoggedIn() {
-  // 从真实的 UserProvider 获取登录状态
-  // 当前默认允许访问，因为支持免登录
-  return true;
-}
-
 /// 路由配置
 class AppRouter {
   static final GoRouter router = GoRouter(
     initialLocation: AppRoutes.home,
     debugLogDiagnostics: true,
+    refreshListenable: di.sl<UserProvider>(),
     redirect: (context, state) {
-      // 路由守卫：需要登录的页面
+      final userProvider = di.sl<UserProvider>();
       final isLoginRequired = state.matchedLocation == AppRoutes.profile;
       
-      if (isLoginRequired && !_isLoggedIn()) {
-        return AppRoutes.home; // 未登录重定向到首页
+      if (isLoginRequired && !userProvider.isLoggedIn) {
+        return AppRoutes.home;
       }
       
-      return null; // 允许访问
+      return null;
     },
     routes: [
       // 主页

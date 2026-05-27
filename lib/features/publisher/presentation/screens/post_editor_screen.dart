@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/components/quill_embed_builders.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/post_provider.dart';
@@ -327,6 +328,9 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
               controller: _controller,
               focusNode: _editorFocusNode,
               scrollController: _editorScrollController,
+              config: const quill.QuillEditorConfig(
+                embedBuilders: [QuillImageEmbedBuilder()],
+              ),
             ),
           ),
         ),

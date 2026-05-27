@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/storage/storage_manager.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../../core/router/app_router.dart';
 import 'search_result_model.dart';
 
@@ -14,104 +14,82 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
-  final StorageManager _storageManager = StorageManager();
   String _filterType = 'all';
   List<SearchResult> _results = [];
   bool _isSearching = false;
 
-  /// 从存储中搜索笔记
+  /// 从 Hive notes_box 搜索笔记
   List<SearchResult> _searchNotes(String query) {
     final results = <SearchResult>[];
-    final keys = _storageManager.getKeys();
-    
-    for (final key in keys) {
-      if (key.startsWith('note_')) {
-        final jsonStr = _storageManager.getString(key);
-        if (jsonStr != null) {
-          try {
-            final data = _storageManager.get<Map<String, dynamic>>(key);
-            if (data != null) {
-              final title = data['title'] as String? ?? '';
-              final content = data['content'] as String? ?? '';
-              if (title.contains(query) || content.contains(query)) {
-                results.add(SearchResult(
-                  id: data['id'] as String? ?? '',
-                  title: title,
-                  contentSnippet: content.length > 50 
-                      ? '${content.substring(0, 50)}...' 
-                      : content,
-                  type: 'note',
-                  createdAt: DateTime.tryParse(data['createdAt'] as String? ?? '') ?? DateTime.now(),
-                  updatedAt: DateTime.tryParse(data['updatedAt'] as String? ?? '') ?? DateTime.now(),
-                ));
-              }
-            }
-          } catch (e) {
-            // 忽略解析错误
-          }
-        }
+    final box = Hive.box<Map>('notes_box');
+    final lowerQuery = query.toLowerCase();
+
+    for (final entry in box.toMap().entries) {
+      final data = entry.value;
+      final title = (data['title'] as String? ?? '');
+      final content = (data['content'] as String? ?? '');
+      if (title.toLowerCase().contains(lowerQuery) ||
+          content.toLowerCase().contains(lowerQuery)) {
+        results.add(SearchResult(
+          id: entry.key,
+          title: title,
+          contentSnippet: content.length > 50
+              ? '${content.substring(0, 50)}...'
+              : content,
+          type: 'note',
+          createdAt: DateTime.tryParse(data['createdAt'] as String? ?? '') ?? DateTime.now(),
+          updatedAt: DateTime.tryParse(data['updatedAt'] as String? ?? '') ?? DateTime.now(),
+        ));
       }
     }
     return results;
   }
 
-  /// 从存储中搜索视频项目
+  /// 从 Hive video_projects_box 搜索视频项目
   List<SearchResult> _searchVideoProjects(String query) {
     final results = <SearchResult>[];
-    final projectsList = _storageManager.get<List>('video_projects_list', defaultValue: []);
-    
-    if (projectsList is List) {
-      for (final item in projectsList) {
-        if (item is Map<String, dynamic>) {
-          final title = item['title'] as String? ?? '';
-          if (title.contains(query)) {
-            results.add(SearchResult(
-              id: item['id'] as String? ?? '',
-              title: title,
-              contentSnippet: '${item['clipCount'] ?? 0} 个片段',
-              type: 'video_project',
-              createdAt: DateTime.tryParse(item['createdAt'] as String? ?? '') ?? DateTime.now(),
-              updatedAt: DateTime.tryParse(item['updatedAt'] as String? ?? '') ?? DateTime.now(),
-            ));
-          }
-        }
+    final box = Hive.box<Map>('video_projects_box');
+    final lowerQuery = query.toLowerCase();
+
+    for (final entry in box.toMap().entries) {
+      final data = entry.value;
+      final title = (data['title'] as String? ?? '');
+      if (title.toLowerCase().contains(lowerQuery)) {
+        results.add(SearchResult(
+          id: entry.key,
+          title: title,
+          contentSnippet: '视频项目',
+          type: 'video_project',
+          createdAt: DateTime.tryParse(data['createdAt'] as String? ?? '') ?? DateTime.now(),
+          updatedAt: DateTime.tryParse(data['updatedAt'] as String? ?? '') ?? DateTime.now(),
+        ));
       }
     }
     return results;
   }
 
-  /// 搜索图文发布内容
+  /// 从 Hive posts_box 搜索帖子
   List<SearchResult> _searchPosts(String query) {
     final results = <SearchResult>[];
-    final keys = _storageManager.getKeys();
-    
-    for (final key in keys) {
-      if (key.startsWith('post_')) {
-        final jsonStr = _storageManager.getString(key);
-        if (jsonStr != null) {
-          try {
-            // 尝试解析为 Map 获取基本信息
-            final data = _storageManager.get<Map<String, dynamic>>(key);
-            if (data != null) {
-              final title = data['title'] as String? ?? '';
-              final content = data['content'] as String? ?? '';
-              if (title.contains(query) || content.contains(query)) {
-                results.add(SearchResult(
-                  id: data['id'] as String? ?? '',
-                  title: title,
-                  contentSnippet: content.length > 50 
-                      ? '${content.substring(0, 50)}...' 
-                      : content,
-                  type: 'post',
-                  createdAt: DateTime.tryParse(data['createdAt'] as String? ?? '') ?? DateTime.now(),
-                  updatedAt: DateTime.tryParse(data['updatedAt'] as String? ?? '') ?? DateTime.now(),
-                ));
-              }
-            }
-          } catch (e) {
-            // 忽略解析错误
-          }
-        }
+    final box = Hive.box<Map>('posts_box');
+    final lowerQuery = query.toLowerCase();
+
+    for (final entry in box.toMap().entries) {
+      final data = entry.value;
+      final title = (data['title'] as String? ?? '');
+      final content = (data['content'] as String? ?? '');
+      if (title.toLowerCase().contains(lowerQuery) ||
+          content.toLowerCase().contains(lowerQuery)) {
+        results.add(SearchResult(
+          id: entry.key,
+          title: title,
+          contentSnippet: content.length > 50
+              ? '${content.substring(0, 50)}...'
+              : content,
+          type: 'post',
+          createdAt: DateTime.tryParse(data['createdAt'] as String? ?? '') ?? DateTime.now(),
+          updatedAt: DateTime.tryParse(data['updatedAt'] as String? ?? '') ?? DateTime.now(),
+        ));
       }
     }
     return results;
@@ -121,15 +99,12 @@ class _SearchScreenState extends State<SearchScreen> {
   void _navigateToDetail(BuildContext context, SearchResult result) {
     switch (result.type) {
       case 'note':
-        // 跳转到笔记详情页
         context.pushNamed('noteDetail', pathParameters: {'id': result.id});
         break;
       case 'post':
-        // 跳转到图文编辑页
         context.pushNamed('postEditor', queryParameters: {'id': result.id});
         break;
       case 'video_project':
-        // 跳转到视频编辑器
         context.push(AppRoutes.videoEditor);
         break;
       default:
@@ -245,7 +220,6 @@ class _SearchScreenState extends State<SearchScreen> {
             padding: EdgeInsets.zero,
           ),
           onTap: () {
-            // 跳转到对应详情页
             _navigateToDetail(context, result);
           },
         );
@@ -258,7 +232,7 @@ class _SearchScreenState extends State<SearchScreen> {
       _isSearching = true;
     });
 
-    Future.delayed(const Duration(milliseconds: 100), () {
+    Future.microtask(() {
       if (!mounted) return;
       setState(() {
         _isSearching = false;
@@ -266,8 +240,7 @@ class _SearchScreenState extends State<SearchScreen> {
           _results = [];
         } else {
           _results = [];
-          
-          // 根据过滤类型搜索不同数据源
+
           if (_filterType == 'all' || _filterType == 'note') {
             _results.addAll(_searchNotes(query));
           }

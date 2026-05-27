@@ -8,7 +8,7 @@ class NotesDataSource {
   late Box<Map> _foldersBox;
 
   /// 初始化数据源
-  Future<void> init() async {
+  void init() {
     _notesBox = Hive.box<Map>(StorageKeys.notesBox);
     _foldersBox = Hive.box<Map>(StorageKeys.foldersBox);
   }

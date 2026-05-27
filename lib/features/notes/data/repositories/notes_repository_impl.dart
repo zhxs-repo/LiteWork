@@ -120,8 +120,11 @@ class NotesRepositoryImpl implements NotesRepository {
           'folderId': note.folderId,
           'isFavorite': note.isFavorite,
           'isSynced': note.isSynced,
+          'isPinned': note.isPinned,
           'createdAt': note.createdAt.toIso8601String(),
           'updatedAt': note.updatedAt.toIso8601String(),
+          if (note.mindMapData != null)
+            'mindMapData': _mindMapToMap(note.mindMapData!),
         },
         'note',
       );
@@ -149,6 +152,10 @@ class NotesRepositoryImpl implements NotesRepository {
       final data = result['data'] as Map<String, dynamic>;
 
       if (type == 'note') {
+        MindMapData? mindMapData;
+        if (data.containsKey('mindMapData') && data['mindMapData'] != null) {
+          mindMapData = _mapToMindMap(data['mindMapData'] as Map);
+        }
         final note = Note(
           id: data['id'] as String,
           title: data['title'] as String,
@@ -157,9 +164,12 @@ class NotesRepositoryImpl implements NotesRepository {
             (e) => e.name == data['type'],
             orElse: () => NoteType.richText,
           ),
+          tags: List<String>.from(data['tags'] ?? []),
           folderId: data['folderId'] as String?,
+          mindMapData: mindMapData,
           isFavorite: data['isFavorite'] as bool? ?? false,
           isSynced: data['isSynced'] as bool? ?? false,
+          isPinned: data['isPinned'] as bool? ?? false,
           createdAt: DateTime.parse(data['createdAt'] as String),
           updatedAt: DateTime.now(),
         );
@@ -183,6 +193,30 @@ class NotesRepositoryImpl implements NotesRepository {
   }
 
   @override
+  Future<Either<Failure, Unit>> clearTrash() async {
+    try {
+      await _trashDataSource.clear();
+      return const Right(unit);
+    } on CacheException catch (e) {
+      return Left(CacheFailure(e.message));
+    } catch (e) {
+      return Left(UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> deletePermanently(String itemId) async {
+    try {
+      await _trashDataSource.deletePermanently(itemId);
+      return const Right(unit);
+    } on CacheException catch (e) {
+      return Left(CacheFailure(e.message));
+    } catch (e) {
+      return Left(UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, Unit>> syncNote(String noteId) async {
     try {
       await _localDataSource.syncNote(noteId);
@@ -192,5 +226,76 @@ class NotesRepositoryImpl implements NotesRepository {
     } catch (e) {
       return Left(UnknownFailure(e.toString()));
     }
+  }
+
+  Map<String, dynamic> _mindMapToMap(MindMapData mindMap) {
+    return {
+      'root': _nodeToMap(mindMap.root),
+      'nodes': mindMap.nodes.map((k, v) => MapEntry(k, _nodeToMap(v))),
+      'layout': mindMap.layout.index,
+    };
+  }
+
+  MindMapData _mapToMindMap(Map data) {
+    final root = _mapToNode(data['root'] as Map);
+    final nodesMap = <String, MindMapNode>{};
+    if (data.containsKey('nodes')) {
+      final nodesData = data['nodes'] as Map;
+      nodesData.forEach((key, value) {
+        nodesMap[key as String] = _mapToNode(value as Map);
+      });
+    }
+    return MindMapData(
+      root: root,
+      nodes: nodesMap,
+      layout: MindMapLayout.values[data['layout'] as int],
+    );
+  }
+
+  Map<String, dynamic> _nodeToMap(MindMapNode node) {
+    return {
+      'id': node.id,
+      'text': node.text,
+      'childIds': node.childIds,
+      'parentId': node.parentId,
+      'style': _styleToMap(node.style),
+      'x': node.x,
+      'y': node.y,
+    };
+  }
+
+  MindMapNode _mapToNode(Map data) {
+    return MindMapNode(
+      id: data['id'] as String,
+      text: data['text'] as String,
+      childIds: List<String>.from(data['childIds'] ?? []),
+      parentId: data['parentId'] as String?,
+      style: _mapToStyle(data['style'] as Map?),
+      x: data['x'] as double?,
+      y: data['y'] as double?,
+    );
+  }
+
+  Map<String, dynamic> _styleToMap(NodeStyle style) {
+    return {
+      'backgroundColor': style.backgroundColor,
+      'textColor': style.textColor,
+      'fontSize': style.fontSize,
+      'fontWeightIndex': style.fontWeightIndex,
+      'borderColor': style.borderColor,
+      'borderWidth': style.borderWidth,
+    };
+  }
+
+  NodeStyle _mapToStyle(Map? data) {
+    if (data == null) return const NodeStyle();
+    return NodeStyle(
+      backgroundColor: data['backgroundColor'] as String?,
+      textColor: data['textColor'] as String?,
+      fontSize: data['fontSize'] as double?,
+      fontWeightIndex: data['fontWeightIndex'] as int?,
+      borderColor: data['borderColor'] as String?,
+      borderWidth: data['borderWidth'] as double?,
+    );
   }
 }
