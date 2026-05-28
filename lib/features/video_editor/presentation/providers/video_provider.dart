@@ -356,6 +356,14 @@ class VideoProvider extends ChangeNotifier {
     }
   }
 
+  /// 批量更新时间线片段列表（用于分割等操作）
+  void updateTimelineClips(List<TimelineClip> newClips) {
+    _clips
+      ..clear()
+      ..addAll(newClips);
+    notifyListeners();
+  }
+
   // ==================== 时间线数据转换 ====================
 
   String? get firstClipPath {

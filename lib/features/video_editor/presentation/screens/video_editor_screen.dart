@@ -125,14 +125,13 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
     // 直接调用 usecase 获取分割后的完整列表，避免手动删除/添加导致的索引不一致
     final updatedClips = _editUseCase.splitClip(provider.clips, clip.id, splitPointMs);
     
-    // 直接用新列表替换旧列表，确保状态一致性
-    provider.clips = updatedClips;
+    // 用 Provider 内部方法替换列表，确保状态同步
+    provider.updateTimelineClips(updatedClips);
     
-    // 自动选中分割后的第一个片段（即分割点前的片段）
-    // 查找新生成的左半部分片段的实际索引
+    // 自动选中分割后的第一个片段（左半部分保留原始 ID）
     setState(() {
-      _selectedSegmentId = updatedClips.indexWhere((c) => c.id == '${clip.id}_split_left');
-      if (_selectedSegmentId == -1) _selectedSegmentId = 0; //  fallback
+      _selectedSegmentId = updatedClips.indexWhere((c) => c.id == clip.id);
+      if (_selectedSegmentId == -1) _selectedSegmentId = 0; // fallback
     });
     
     ScaffoldMessenger.of(context).showSnackBar(
