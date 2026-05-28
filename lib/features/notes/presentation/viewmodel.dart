@@ -8,6 +8,10 @@ import '../domain/usecases/delete_note_use_case.dart';
 import '../domain/usecases/move_note_to_trash_use_case.dart';
 import '../domain/usecases/restore_from_trash_use_case.dart';
 import '../domain/usecases/get_folders_use_case.dart';
+import '../domain/usecases/create_folder_usecase.dart';
+import '../domain/usecases/delete_folder_usecase.dart';
+import '../domain/usecases/clear_trash_usecase.dart';
+import '../domain/usecases/delete_permanently_usecase.dart';
 
 /// 回收站项目模型
 class TrashItem {
@@ -45,6 +49,10 @@ class NotesViewModel extends ChangeNotifier {
   final MoveNoteToTrashUseCase _moveNoteToTrashUseCase;
   final RestoreFromTrashUseCase _restoreFromTrashUseCase;
   final GetFoldersUseCase _getFoldersUseCase;
+  final CreateFolderUseCase _createFolderUseCase;
+  final DeleteFolderUseCase _deleteFolderUseCase;
+  final ClearTrashUseCase _clearTrashUseCase;
+  final DeletePermanentlyUseCase _deletePermanentlyUseCase;
 
   final List<Note> _notes = [];
   final List<NoteFolder> _folders = [];
@@ -63,12 +71,20 @@ class NotesViewModel extends ChangeNotifier {
     required MoveNoteToTrashUseCase moveNoteToTrashUseCase,
     required RestoreFromTrashUseCase restoreFromTrashUseCase,
     required GetFoldersUseCase getFoldersUseCase,
+    required CreateFolderUseCase createFolderUseCase,
+    required DeleteFolderUseCase deleteFolderUseCase,
+    required ClearTrashUseCase clearTrashUseCase,
+    required DeletePermanentlyUseCase deletePermanentlyUseCase,
   })  : _getNotesUseCase = getNotesUseCase,
         _saveNoteUseCase = saveNoteUseCase,
         _deleteNoteUseCase = deleteNoteUseCase,
         _moveNoteToTrashUseCase = moveNoteToTrashUseCase,
         _restoreFromTrashUseCase = restoreFromTrashUseCase,
-        _getFoldersUseCase = getFoldersUseCase;
+        _getFoldersUseCase = getFoldersUseCase,
+        _createFolderUseCase = createFolderUseCase,
+        _deleteFolderUseCase = deleteFolderUseCase,
+        _clearTrashUseCase = clearTrashUseCase,
+        _deletePermanentlyUseCase = deletePermanentlyUseCase;
 
   List<Note> get notes => _notes;
   List<NoteFolder> get folders => _folders;
@@ -388,7 +404,7 @@ class NotesViewModel extends ChangeNotifier {
         name: name,
         createdAt: DateTime.now(),
       );
-      final result = await _getFoldersUseCase.repository.saveFolder(folder);
+      final result = await _createFolderUseCase(folder);
       result.fold(
         (failure) {
           _error = failure.message;
@@ -408,8 +424,7 @@ class NotesViewModel extends ChangeNotifier {
   /// 删除文件夹
   Future<void> deleteFolder(String folderId) async {
     try {
-      final repo = _getFoldersUseCase.repository;
-      final result = await repo.deleteFolder(folderId);
+      final result = await _deleteFolderUseCase(folderId);
       result.fold(
         (failure) {
           _error = failure.message;
@@ -442,7 +457,7 @@ class NotesViewModel extends ChangeNotifier {
   /// 清空回收站
   Future<void> clearTrash() async {
     try {
-      await _moveNoteToTrashUseCase.repository.clearTrash();
+      await _clearTrashUseCase();
       _trashItems.clear();
       _isTrashInitialized = false;
       notifyListeners();
@@ -455,7 +470,7 @@ class NotesViewModel extends ChangeNotifier {
   /// 彻底删除回收站项目
   Future<void> deletePermanently(String itemId) async {
     try {
-      await _restoreFromTrashUseCase.repository.deletePermanently(itemId);
+      await _deletePermanentlyUseCase(itemId);
       _trashItems.removeWhere((item) => item.id == itemId);
       notifyListeners();
     } catch (e) {
