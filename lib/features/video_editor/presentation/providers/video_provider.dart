@@ -525,12 +525,15 @@ class VideoProvider extends ChangeNotifier {
     }
   }
 
+  // 已废弃：使用 startRendering() 替代进行真实渲染
+  @Deprecated('Use startRendering() instead for real FFmpeg rendering')
   Future<void> startExport() async {
     _isExporting = true;
     _exportProgress = 0;
     notifyListeners();
 
     try {
+      // 模拟进度仅用于测试 UI，实际应调用 startRendering()
       for (int i = 0; i <= 100; i += 10) {
         await Future.delayed(const Duration(milliseconds: 300));
         _exportProgress = i;

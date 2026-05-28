@@ -33,11 +33,31 @@ class EditorToolbar extends StatelessWidget {
             enabled: hasSelection,
             onTap: onDelete,
           ),
-          _ToolbarButton(icon: Icons.speed, label: '变速'),
-          _ToolbarButton(icon: Icons.flip, label: '倒放'),
-          _ToolbarButton(icon: Icons.filter, label: '滤镜'),
-          _ToolbarButton(icon: Icons.text_fields, label: '字幕'),
-          _ToolbarButton(icon: Icons.music_note, label: '音频'),
+          _ToolbarButton(
+            icon: Icons.speed,
+            label: '变速',
+            tooltip: '即将上线',
+          ),
+          _ToolbarButton(
+            icon: Icons.flip,
+            label: '倒放',
+            tooltip: '即将上线',
+          ),
+          _ToolbarButton(
+            icon: Icons.filter,
+            label: '滤镜',
+            tooltip: '即将上线',
+          ),
+          _ToolbarButton(
+            icon: Icons.text_fields,
+            label: '字幕',
+            tooltip: '即将上线',
+          ),
+          _ToolbarButton(
+            icon: Icons.music_note,
+            label: '音频',
+            tooltip: '即将上线',
+          ),
         ],
       ),
     );
@@ -49,12 +69,14 @@ class _ToolbarButton extends StatelessWidget {
   final String label;
   final bool enabled;
   final VoidCallback? onTap;
+  final String? tooltip;
 
   const _ToolbarButton({
     required this.icon,
     required this.label,
     this.enabled = false,
     this.onTap,
+    this.tooltip,
   });
 
   @override
@@ -62,8 +84,9 @@ class _ToolbarButton extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isActive = enabled && onTap != null;
     final opacity = isActive ? 1.0 : 0.38;
+    final tooltipMessage = tooltip ?? (isActive ? label : '即将上线');
     return Tooltip(
-      message: isActive ? label : '即将上线',
+      message: tooltipMessage,
       preferBelow: false,
       child: Opacity(
         opacity: opacity,

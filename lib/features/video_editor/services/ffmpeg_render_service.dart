@@ -119,15 +119,15 @@ class FFmpegRenderService {
       inputs.add('-i');
       inputs.add(path);
       
-      final inputIndex = i + 1; // FFmpeg 输入索引从 1 开始（0 是全局选项）
+      final inputIndex = i; // FFmpeg 输入索引从 0 开始（第 0 个输入对应 [0:v], 第 1 个对应 [1:v]）
       final label = 'v$outputIndex';
       
       if (isImage) {
         // 图片：设置循环和时长
-        filters.add('[$inputIndex]loop=1:1:${durationSec > 0 ? durationSec : 3},format=yuv420p[$label]');
+        filters.add('[$inputIndex:v]loop=1:1:${durationSec > 0 ? durationSec : 3},format=yuv420p[$label]');
       } else {
         // 视频：应用修剪
-        String filter = '[$inputIndex]';
+        String filter = '[$inputIndex:v]';
         if (startTimeSec > 0 || durationSec > 0) {
           filter += 'trim=';
           if (startTimeSec > 0) filter += 'start=$startTimeSec';

@@ -120,21 +120,19 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
       return;
     }
 
-    final result = _editUseCase.splitClip(provider.clips, clip.id, splitPointMs);
-    final oldIndex = result.indexWhere((c) => c.id == clip.id);
-    if (oldIndex == -1) return;
-
-    provider.deleteClip(clip.id);
-    provider.addClipToTimeline(result[oldIndex]);
-
-    final newClipIndex = result.indexWhere((c) => c.id == '${clip.id}_split');
-    if (newClipIndex != -1) {
-      provider.addClipToTimeline(result[newClipIndex]);
-    }
-
-    setState(() => _selectedSegmentId = null);
+    // 直接调用 usecase 获取分割后的完整列表，避免手动删除/添加导致的索引不一致
+    final updatedClips = _editUseCase.splitClip(provider.clips, clip.id, splitPointMs);
+    
+    // 直接用新列表替换旧列表，确保状态一致性
+    provider.updateTimelineClips(updatedClips);
+    
+    // 自动选中分割后的第一个片段，提升用户体验
+    setState(() {
+      _selectedSegmentId = 0; // 选中分割点前的片段
+    });
+    
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('片段已分割')),
+      const SnackBar(content: Text('片段已分割'), duration: Duration(seconds: 1)),
     );
   }
 
