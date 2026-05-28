@@ -78,7 +78,19 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
     final timelineData = provider.buildTimelineData();
     return Column(
       children: [
-        Expanded(flex: 3, child: PreviewPlayer(videoPath: provider.firstClipPath)),
+        Expanded(
+          flex: 3, 
+          child: PreviewPlayer(
+            videoPath: provider.firstClipPath,
+            currentPosition: Duration(milliseconds: (_playheadPosition * 1000).round()),
+            onPositionChanged: (position) {
+              // 播放时同步更新播放头位置
+              setState(() {
+                _playheadPosition = position.inMilliseconds / 1000;
+              });
+            },
+          ),
+        ),
         const Divider(height: 1),
         Expanded(flex: 2, child: TimelineView(
           timelineData: timelineData,

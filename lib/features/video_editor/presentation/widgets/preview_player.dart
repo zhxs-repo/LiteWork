@@ -23,6 +23,7 @@ class _PreviewPlayerState extends State<PreviewPlayer> {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   bool _isInitialized = false;
+  Duration _currentPosition = Duration.zero;
 
   @override
   void initState() {
@@ -39,7 +40,10 @@ class _PreviewPlayerState extends State<PreviewPlayer> {
       _disposeControllers();
       _initializePlayer(widget.videoPath!);
     }
-    if (widget.currentPosition != null && _isInitialized) {
+    // 处理播放头跳转
+    if (widget.currentPosition != null && 
+        widget.currentPosition != oldWidget.currentPosition && 
+        _isInitialized) {
       _seekTo(widget.currentPosition!);
     }
   }
@@ -62,7 +66,12 @@ class _PreviewPlayerState extends State<PreviewPlayer> {
 
       _videoController!.addListener(() {
         if (widget.onPositionChanged != null && _videoController!.value.isInitialized) {
-          widget.onPositionChanged!(_videoController!.value.position);
+          final newPosition = _videoController!.value.position;
+          // 防抖处理，避免频繁更新
+          if ((newPosition - _currentPosition).inMilliseconds.abs() > 50) {
+            _currentPosition = newPosition;
+            widget.onPositionChanged!(newPosition);
+          }
         }
       });
 

@@ -6,6 +6,7 @@ import '../../data/models/media_item_model.dart';
 import '../../data/models/timeline_clip_model.dart';
 import '../../data/models/timeline_data_model.dart';
 import '../../domain/models.dart' as domain;
+import '../../services/ffmpeg_render_service.dart';
 
 /// 统一视频 Provider - 合并项目列表 CRUD、编辑器详情、导出配置
 class VideoProvider extends ChangeNotifier {
@@ -28,6 +29,9 @@ class VideoProvider extends ChangeNotifier {
   String _resolution = '1080p';
   String _frameRate = '30';
   String _aspectRatio = '9:16';
+  String? _lastExportPath;
+  
+  final FFmpegRenderService _ffmpegService = FFmpegRenderService();
 
   // Getters - 项目列表
   List<domain.VideoProject> get projects => _projects;
@@ -46,6 +50,7 @@ class VideoProvider extends ChangeNotifier {
   String get resolution => _resolution;
   String get frameRate => _frameRate;
   String get aspectRatio => _aspectRatio;
+  String? get lastExportPath => _lastExportPath;
   String get estimatedSize => '~${(_resolution == '1080p' ? 150 : 80)}MB';
   String get estimatedTime => '~2分钟';
 
@@ -410,25 +415,82 @@ class VideoProvider extends ChangeNotifier {
 
   // ==================== 渲染与导出 ====================
 
+  /// 使用 FFmpeg 进行真实视频渲染
   Future<void> startRendering() async {
-    if (_currentProject == null || _currentProject!.clips.isEmpty) return;
+    if (_currentProject == null || _clips.isEmpty) return;
 
     _isLoading = true;
     _renderProgress = 0.0;
     notifyListeners();
 
     try {
-      // 模拟 FFmpeg 渲染进度
-      for (int i = 0; i <= 100; i += 5) {
-        await Future.delayed(const Duration(milliseconds: 150));
-        _renderProgress = i / 100;
-        notifyListeners();
+      // 收集所有片段信息（包含修剪参数和图片标记）
+      final clipsData = <Map<String, dynamic>>[];
+      for (final clip in _clips) {
+        final media = _availableMedia.firstWhere(
+          (m) => m.id == clip.mediaId,
+          orElse: () => MediaItem(id: '', path: '', type: MediaType.image, durationMs: 0, createdAt: DateTime.now()),
+        );
+        
+        if (media.path.isEmpty) continue;
+
+        // 计算修剪后的实际时长
+        final trimStartMs = clip.trimStartMs ?? 0;
+        final trimEndMs = clip.trimEndMs ?? media.durationMs;
+        final actualDurationMs = (trimEndMs - trimStartMs).clamp(0, media.durationMs);
+
+        clipsData.add({
+          'path': media.path,
+          'startTimeMs': trimStartMs,
+          'durationMs': actualDurationMs,
+          'isImage': media.type == MediaType.image,
+        });
       }
 
-      _currentProject = _currentProject!.copyWith(
-        status: domain.ProjectStatus.completed,
+      if (clipsData.isEmpty) {
+        throw Exception('没有可用的素材');
+      }
+
+      // 生成输出文件路径
+      final outputPath = await _ffmpegService.getOutputFilePath(
+        projectName: _currentProject!.title,
       );
-      await saveCurrentProject();
+
+      // 执行 FFmpeg 渲染
+      final resultPath = await _ffmpegService.renderVideo(
+        clips: clipsData,
+        outputPath: outputPath,
+        resolution: _resolution,
+        frameRate: _frameRate,
+        aspectRatio: _aspectRatio,
+        onProgress: (progress) {
+          _renderProgress = progress;
+          notifyListeners();
+        },
+      );
+
+      if (resultPath != null) {
+        _lastExportPath = resultPath;
+        _currentProject = _currentProject!.copyWith(
+          status: domain.ProjectStatus.completed,
+        );
+        await saveCurrentProject();
+        
+        // 将导出的视频添加到素材库
+        final exportedMedia = MediaItem(
+          id: 'exported_${DateTime.now().millisecondsSinceEpoch}',
+          path: resultPath,
+          type: MediaType.video,
+          durationMs: clipsData.fold<int>(0, (sum, c) => sum + (c['durationMs'] as int)),
+          createdAt: DateTime.now(),
+        );
+        await _dataSource.saveMedia(exportedMedia);
+        _availableMedia.add(exportedMedia);
+        
+        print('视频导出成功：$resultPath');
+      } else {
+        throw Exception('FFmpeg 渲染失败');
+      }
 
       _isLoading = false;
       notifyListeners();
@@ -442,15 +504,19 @@ class VideoProvider extends ChangeNotifier {
     }
   }
 
+  /// 导出视频（兼容旧接口）
   Future<String?> exportVideo() async {
     if (_currentProject == null) return null;
     try {
       _isLoading = true;
       notifyListeners();
-      await Future.delayed(const Duration(seconds: 2));
+      
+      // 调用真实渲染
+      await startRendering();
+      
       _isLoading = false;
       notifyListeners();
-      return '/storage/emulated/0/DCIM/LiteWork/export_${DateTime.now().millisecondsSinceEpoch}.mp4';
+      return _lastExportPath;
     } catch (e) {
       _error = e.toString();
       _isLoading = false;

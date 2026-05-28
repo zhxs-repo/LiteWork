@@ -224,6 +224,17 @@ class TimelinePainter extends CustomPainter {
           Paint()..color = isDragged ? Colors.orange : (isSelected ? Colors.blue : _getTrackColor(track.type)),
         );
 
+        // 选中边框
+        if (isSelected && !isDragged) {
+          canvas.drawRect(
+            Rect.fromLTWH(x, yOffset + 2, w - 2, trackHeight - 4),
+            Paint()
+              ..color = Colors.white
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 3,
+          );
+        }
+
         if (isDragged) {
           canvas.drawRect(
             Rect.fromLTWH(x, yOffset + 2, w - 2, trackHeight - 4),
