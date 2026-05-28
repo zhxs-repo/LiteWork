@@ -171,8 +171,8 @@ class _PostCard extends StatelessWidget {
             ],
           ),
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+        trailing: Wrap(
+          spacing: 4,
           children: [
             IconButton(
               icon: const Icon(Icons.edit, size: 20),

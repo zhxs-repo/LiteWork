@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/post_provider.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../widgets/collapsible_toolbar.dart';
 
 /// 富文本编辑器屏幕
 class PostEditorScreen extends StatefulWidget {
@@ -298,43 +299,64 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   // ─── Body ────────────────────────────────────────────────────────────
 
   Widget _buildBody() {
-    return Column(
-      children: [
-        Container(
-          height: 44,
-          color: AppTheme.surfaceColor,
-          child: Row(
-            children: [
-              const SizedBox(width: 4),
-              IconButton(
-                icon: const Icon(Icons.image, size: 20),
-                tooltip: '插入图片',
-                onPressed: _insertImages,
-              ),
-              IconButton(
-                icon: const Icon(Icons.image_search, size: 20),
-                tooltip: '设置封面图',
-                onPressed: _setCoverImage,
-              ),
-            ],
-          ),
-        ),
-        quill.QuillSimpleToolbar(controller: _controller),
-        const Divider(height: 1),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: quill.QuillEditor(
-              controller: _controller,
-              focusNode: _editorFocusNode,
-              scrollController: _editorScrollController,
-              config: const quill.QuillEditorConfig(
-                embedBuilders: [QuillImageEmbedBuilder()],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 600;
+
+        return Column(
+          children: [
+            // 图片工具栏 - 紧凑模式
+            SizedBox(
+              height: isNarrow ? 36 : 44,
+              child: Row(
+                children: [
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.image, size: 20),
+                    tooltip: '插入图片',
+                    onPressed: _insertImages,
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints(
+                      minWidth: isNarrow ? 36 : 48,
+                      minHeight: isNarrow ? 36 : 48,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.image_search, size: 20),
+                    tooltip: '设置封面图',
+                    onPressed: _setCoverImage,
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints(
+                      minWidth: isNarrow ? 36 : 48,
+                      minHeight: isNarrow ? 36 : 48,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ),
-      ],
+            // 格式工具栏 - 可折叠
+            CollapsibleToolbar(
+              controller: _controller,
+              onInsertImage: _insertImages,
+              initiallyExpanded: !isNarrow,
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: quill.QuillEditor(
+                  controller: _controller,
+                  focusNode: _editorFocusNode,
+                  scrollController: _editorScrollController,
+                  config: const quill.QuillEditorConfig(
+                    embedBuilders: [QuillImageEmbedBuilder()],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -405,48 +427,62 @@ class _ExportSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _PlatformTile(
-            icon: Icons.content_copy,
-            label: '复制为文本',
-            subtitle: '粘贴到任意平台',
-            color: Colors.blue,
-            onTap: onCopyText,
-          ),
-          const Divider(indent: 16, endIndent: 16),
-          _PlatformTile(
-            icon: Icons.chat,
-            label: '微信公众号',
-            subtitle: '复制内容后手动发布',
-            color: Colors.green,
-            onTap: onCopyText,
-          ),
-          _PlatformTile(
-            icon: Icons.book,
-            label: '知乎',
-            subtitle: '复制内容后手动发布',
-            color: Colors.blue,
-            onTap: onCopyText,
-          ),
-          _PlatformTile(
-            icon: Icons.alternate_email,
-            label: '微博',
-            subtitle: '复制内容后手动发布',
-            color: Colors.orange,
-            onTap: onCopyText,
-          ),
-          _PlatformTile(
-            icon: Icons.article,
-            label: '今日头条',
-            subtitle: '复制内容后手动发布',
-            color: Colors.red,
-            onTap: onCopyText,
-          ),
-          _PlatformTile(
-            icon: Icons.auto_stories,
-            label: '小红书',
-            subtitle: '复制内容后手动发布',
-            color: Colors.pink,
-            onTap: onCopyText,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 400;
+              final crossAxisCount = isNarrow ? 2 : 3;
+              
+              return GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: crossAxisCount,
+                childAspectRatio: 3.5,
+                children: [
+                  _PlatformTile(
+                    icon: Icons.content_copy,
+                    label: '复制为文本',
+                    subtitle: '粘贴到任意平台',
+                    color: Colors.blue,
+                    onTap: onCopyText,
+                  ),
+                  _PlatformTile(
+                    icon: Icons.chat,
+                    label: '微信公众号',
+                    subtitle: '复制内容后手动发布',
+                    color: Colors.green,
+                    onTap: onCopyText,
+                  ),
+                  _PlatformTile(
+                    icon: Icons.book,
+                    label: '知乎',
+                    subtitle: '复制内容后手动发布',
+                    color: Colors.blue,
+                    onTap: onCopyText,
+                  ),
+                  _PlatformTile(
+                    icon: Icons.alternate_email,
+                    label: '微博',
+                    subtitle: '复制内容后手动发布',
+                    color: Colors.orange,
+                    onTap: onCopyText,
+                  ),
+                  _PlatformTile(
+                    icon: Icons.article,
+                    label: '今日头条',
+                    subtitle: '复制内容后手动发布',
+                    color: Colors.red,
+                    onTap: onCopyText,
+                  ),
+                  _PlatformTile(
+                    icon: Icons.auto_stories,
+                    label: '小红书',
+                    subtitle: '复制内容后手动发布',
+                    color: Colors.pink,
+                    onTap: onCopyText,
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
