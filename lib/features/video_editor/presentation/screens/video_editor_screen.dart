@@ -111,7 +111,9 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
     if (_selectedSegmentId == null || _selectedSegmentId! >= provider.clips.length) return;
 
     final clip = provider.clips[_selectedSegmentId!];
-    final splitPointMs = (_playheadPosition * 1000).round() - clip.positionMs;
+    // 确保分割点在片段范围内，使用 clamp 防止负值或超界
+    final splitPointMs = ((_playheadPosition * 1000).round() - clip.positionMs)
+        .clamp(0, clip.durationMs);
 
     if (splitPointMs <= 0 || splitPointMs >= clip.durationMs) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -124,11 +126,13 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
     final updatedClips = _editUseCase.splitClip(provider.clips, clip.id, splitPointMs);
     
     // 直接用新列表替换旧列表，确保状态一致性
-    provider.updateTimelineClips(updatedClips);
+    provider.clips = updatedClips;
     
-    // 自动选中分割后的第一个片段，提升用户体验
+    // 自动选中分割后的第一个片段（即分割点前的片段）
+    // 查找新生成的左半部分片段的实际索引
     setState(() {
-      _selectedSegmentId = 0; // 选中分割点前的片段
+      _selectedSegmentId = updatedClips.indexWhere((c) => c.id == '${clip.id}_split_left');
+      if (_selectedSegmentId == -1) _selectedSegmentId = 0; //  fallback
     });
     
     ScaffoldMessenger.of(context).showSnackBar(
