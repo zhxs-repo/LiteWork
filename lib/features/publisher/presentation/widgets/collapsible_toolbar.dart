@@ -117,15 +117,17 @@ class _CollapsibleToolbarState extends State<CollapsibleToolbar> {
   }
 
   void _insertLink() {
+    final controller = TextEditingController();
     showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('插入链接'),
         content: TextField(
+          controller: controller,
           decoration: const InputDecoration(hintText: 'https://example.com'),
           autofocus: true,
-          onSubmitted: (url) {
-            Navigator.pop(ctx, url);
+          onSubmitted: (value) {
+            Navigator.pop(ctx, value);
           },
         ),
         actions: [
@@ -135,8 +137,7 @@ class _CollapsibleToolbarState extends State<CollapsibleToolbar> {
           ),
           TextButton(
             onPressed: () {
-              final text = (ctx.findRenderObject() as RenderObject?)?.toString();
-              Navigator.pop(ctx, url);
+              Navigator.pop(ctx, controller.text);
             },
             child: const Text('确定'),
           ),
