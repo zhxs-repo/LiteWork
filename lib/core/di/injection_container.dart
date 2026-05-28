@@ -99,6 +99,11 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<GetFoldersUseCase>(
     () => GetFoldersUseCase(sl()),
   );
+  // Notes - Use Cases (新增文件夹和回收站相关)
+  sl.registerLazySingleton<CreateFolderUseCase>(() => CreateFolderUseCase(sl()));
+  sl.registerLazySingleton<DeleteFolderUseCase>(() => DeleteFolderUseCase(sl()));
+  sl.registerLazySingleton<ClearTrashUseCase>(() => ClearTrashUseCase(sl()));
+  sl.registerLazySingleton<DeletePermanentlyUseCase>(() => DeletePermanentlyUseCase(sl()));
 
   // Notes - Provider (updated to use UseCases)
   sl.registerFactory<NotesViewModel>(
@@ -109,6 +114,10 @@ Future<void> initDependencies() async {
       moveNoteToTrashUseCase: sl(),
       restoreFromTrashUseCase: sl(),
       getFoldersUseCase: sl(),
+      createFolderUseCase: sl(),
+      deleteFolderUseCase: sl(),
+      clearTrashUseCase: sl(),
+      deletePermanentlyUseCase: sl(),
     ),
   );
 

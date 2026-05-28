@@ -1,11 +1,13 @@
-import '../../data/datasources/trash_datasource.dart';
+import '../repositories/notes_repository.dart';
+import 'package:dartz/dartz.dart';
+import '../../../../core/error/failure.dart';
 
 class DeletePermanentlyUseCase {
-  final TrashDataSource dataSource;
+  final NotesRepository repository;
 
-  DeletePermanentlyUseCase(this.dataSource);
+  DeletePermanentlyUseCase(this.repository);
 
-  Future<void> call(String noteId) async {
-    await dataSource.deletePermanently(noteId);
+  Future<Either<Failure, Unit>> call(String itemId) async {
+    return await repository.deletePermanently(itemId);
   }
 }

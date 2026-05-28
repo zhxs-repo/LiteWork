@@ -95,6 +95,34 @@ class MindMapData {
       layout: layout ?? this.layout,
     );
   }
+  
+  /// 转换为 JSON Map
+  Map<String, dynamic> toJson() {
+    return {
+      'root': root.toJson(),
+      'nodes': nodes.map((key, value) => MapEntry(key, value.toJson())),
+      'layout': layout.name,
+    };
+  }
+  
+  /// 从 JSON Map 创建
+  factory MindMapData.fromJson(Map<String, dynamic> json) {
+    final rootJson = json['root'] as Map<String, dynamic>;
+    final root = MindMapNode.fromJson(rootJson);
+    final nodesJson = json['nodes'] as Map<String, dynamic>? ?? {};
+    final nodes = <String, MindMapNode>{};
+    nodesJson.forEach((key, value) {
+      nodes[key] = MindMapNode.fromJson(value as Map<String, dynamic>);
+    });
+    return MindMapData(
+      root: root,
+      nodes: nodes,
+      layout: MindMapLayout.values.firstWhere(
+        (e) => e.name == json['layout'],
+        orElse: () => MindMapLayout.horizontal,
+      ),
+    );
+  }
 }
 
 /// 思维导图节点模型
@@ -136,6 +164,34 @@ class MindMapNode {
       y: y ?? this.y,
     );
   }
+  
+  /// 转换为 JSON Map
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'text': text,
+      'childIds': childIds,
+      'parentId': parentId,
+      'style': style.toJson(),
+      'x': x,
+      'y': y,
+    };
+  }
+  
+  /// 从 JSON Map 创建
+  factory MindMapNode.fromJson(Map<String, dynamic> json) {
+    return MindMapNode(
+      id: json['id'] as String,
+      text: json['text'] as String,
+      childIds: List<String>.from(json['childIds'] ?? []),
+      parentId: json['parentId'] as String?,
+      style: json['style'] != null 
+          ? NodeStyle.fromJson(json['style'] as Map<String, dynamic>)
+          : const NodeStyle(),
+      x: json['x'] as double?,
+      y: json['y'] as double?,
+    );
+  }
 }
 
 /// 节点样式模型
@@ -171,6 +227,30 @@ class NodeStyle {
       fontWeightIndex: fontWeightIndex ?? this.fontWeightIndex,
       borderColor: borderColor ?? this.borderColor,
       borderWidth: borderWidth ?? this.borderWidth,
+    );
+  }
+  
+  /// 转换为 JSON Map
+  Map<String, dynamic> toJson() {
+    return {
+      'backgroundColor': backgroundColor,
+      'textColor': textColor,
+      'fontSize': fontSize,
+      'fontWeightIndex': fontWeightIndex,
+      'borderColor': borderColor,
+      'borderWidth': borderWidth,
+    };
+  }
+  
+  /// 从 JSON Map 创建
+  factory NodeStyle.fromJson(Map<String, dynamic> json) {
+    return NodeStyle(
+      backgroundColor: json['backgroundColor'] as String?,
+      textColor: json['textColor'] as String?,
+      fontSize: json['fontSize'] as double?,
+      fontWeightIndex: json['fontWeightIndex'] as int?,
+      borderColor: json['borderColor'] as String?,
+      borderWidth: json['borderWidth'] as double?,
     );
   }
 }
