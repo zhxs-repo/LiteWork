@@ -12,6 +12,7 @@ import 'core/di/injection_container.dart' as di;
 import 'features/video_editor/presentation/providers/video_provider.dart';
 import 'features/notes/presentation/viewmodel.dart';
 import 'features/base/presentation/providers/user_provider.dart';
+import 'features/base/presentation/providers/sync_provider.dart';
 import 'features/publisher/presentation/providers/post_provider.dart';
 import 'screens/onboarding_screen.dart';
 
@@ -61,6 +62,9 @@ class LiteWorkApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => di.sl<NotesViewModel>()..initialize(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SyncProvider()..init(),
         ),
       ],
       child: Consumer<ThemeNotifier>(

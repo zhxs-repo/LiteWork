@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../features/base/presentation/providers/user_provider.dart';
 import '../../features/base/presentation/screens/profile_screen.dart';
+import '../../features/base/presentation/screens/sync_settings_page.dart';
 import '../../features/publisher/presentation/screens/post_list_screen.dart';
 import '../../features/publisher/presentation/screens/post_editor_screen.dart';
 import '../../features/publisher/presentation/providers/post_provider.dart';
@@ -33,6 +34,7 @@ class AppRoutes {
   static const String notesEdit = '/notes/edit';
   static const String noteDetail = '/notes/:id';
   static const String profile = '/profile';
+  static const String syncSettings = '/settings/sync';
   static const String search = '/search';
   static const String trash = '/trash';
 }
@@ -71,6 +73,15 @@ class AppRouter {
             pageBuilder: (context, state) => const NoTransitionPage(
               child: ProfilePage(),
             ),
+            routes: [
+              GoRoute(
+                path: 'sync',
+                name: 'syncSettings',
+                pageBuilder: (context, state) => const MaterialPage(
+                  child: SyncSettingsPage(),
+                ),
+              ),
+            ],
           ),
           
           // 图文发布模块

@@ -5,22 +5,30 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/network/webdav_client.dart';
 import '../../domain/models.dart';
 import '../../domain/repositories/notes_repository.dart';
 import '../datasources/trash_datasource.dart';
 import '../note_datasource.dart';
+import '../datasources/remote/notes_remote_datasource.dart';
 import '../../utils/mind_map_mapper.dart';
 
 /// 笔记仓库实现类
 class NotesRepositoryImpl implements NotesRepository {
   final NotesDataSource _localDataSource;
   final TrashDataSource _trashDataSource;
+  final NotesRemoteDataSource _remoteDataSource;
+  final WebDavClient _webDavClient;
 
   NotesRepositoryImpl({
     required NotesDataSource localDataSource,
     required TrashDataSource trashDataSource,
+    required NotesRemoteDataSource remoteDataSource,
+    required WebDavClient webDavClient,
   })  : _localDataSource = localDataSource,
-        _trashDataSource = trashDataSource;
+        _trashDataSource = trashDataSource,
+        _remoteDataSource = remoteDataSource,
+        _webDavClient = webDavClient;
 
   @override
   Future<Either<Failure, List<Note>>> getAllNotes() async {
@@ -220,12 +228,59 @@ class NotesRepositoryImpl implements NotesRepository {
   @override
   Future<Either<Failure, Unit>> syncNote(String noteId) async {
     try {
-      await _localDataSource.syncNote(noteId);
+      // 检查 WebDAV 是否已配置
+      if (!_webDavClient.isConfigured) {
+        return Left(SyncFailure('WebDAV 未配置，请先设置同步服务器'));
+      }
+      
+      // 获取本地笔记
+      final note = _localDataSource.getNoteById(noteId);
+      if (note == null) {
+        throw CacheException('笔记不存在：$noteId');
+      }
+      
+      // 上传到 WebDAV
+      await _remoteDataSource.uploadNote(note);
+      
+      // 标记为已同步
+      final updatedNote = note.copyWith(
+        isSynced: true,
+        lastSyncedAt: DateTime.now(),
+      );
+      await _localDataSource.saveNote(updatedNote);
+      
       return const Right(unit);
+    } on AuthException catch (e) {
+      return Left(SyncFailure('认证失败：${e.message}'));
+    } on NetworkException catch (e) {
+      return Left(SyncFailure('网络错误：${e.message}'));
     } on CacheException catch (e) {
       return Left(CacheFailure(e.message));
     } catch (e) {
-      return Left(UnknownFailure(e.toString()));
+      return Left(UnknownFailure('同步失败：$e'));
     }
   }
+  
+  @override
+  Future<Either<Failure, Note>> downloadNoteFromCloud(String noteId) async {
+    try {
+      if (!_webDavClient.isConfigured) {
+        return Left(SyncFailure('WebDAV 未配置，请先设置同步服务器'));
+      }
+      
+      final note = await _remoteDataSource.downloadNote(noteId);
+      await _localDataSource.saveNote(note);
+      
+      return Right(note);
+    } on AuthException catch (e) {
+      return Left(SyncFailure('认证失败：${e.message}'));
+    } on NetworkException catch (e) {
+      return Left(SyncFailure('网络错误：${e.message}'));
+    } catch (e) {
+      return Left(UnknownFailure('下载失败：$e'));
+    }
+  }
+  
+  /// 检查 WebDAV 配置状态
+  bool get isWebDavConfigured => _webDavClient.isConfigured;
 }

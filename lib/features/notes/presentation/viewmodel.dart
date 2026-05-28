@@ -12,6 +12,8 @@ import '../domain/usecases/create_folder_usecase.dart';
 import '../domain/usecases/delete_folder_usecase.dart';
 import '../domain/usecases/clear_trash_usecase.dart';
 import '../domain/usecases/delete_permanently_usecase.dart';
+import '../domain/usecases/sync_note_use_case.dart';
+import '../../../../core/error/failure.dart';
 
 /// 回收站项目模型
 class TrashItem {
@@ -53,6 +55,9 @@ class NotesViewModel extends ChangeNotifier {
   final DeleteFolderUseCase _deleteFolderUseCase;
   final ClearTrashUseCase _clearTrashUseCase;
   final DeletePermanentlyUseCase _deletePermanentlyUseCase;
+  final SyncNoteUseCase _syncNoteUseCase;
+  final DownloadNoteUseCase _downloadNoteUseCase;
+  final CheckWebDavConfiguredUseCase _checkWebDavConfiguredUseCase;
 
   final List<Note> _notes = [];
   final List<NoteFolder> _folders = [];
@@ -63,6 +68,8 @@ class NotesViewModel extends ChangeNotifier {
   String? _selectedFolderId;
   bool _isInitialized = false;
   bool _isTrashInitialized = false;
+  bool _isSyncing = false;
+  bool _isWebDavConfigured = false;
 
   NotesViewModel({
     required GetNotesUseCase getNotesUseCase,
@@ -75,6 +82,9 @@ class NotesViewModel extends ChangeNotifier {
     required DeleteFolderUseCase deleteFolderUseCase,
     required ClearTrashUseCase clearTrashUseCase,
     required DeletePermanentlyUseCase deletePermanentlyUseCase,
+    required SyncNoteUseCase syncNoteUseCase,
+    required DownloadNoteUseCase downloadNoteUseCase,
+    required CheckWebDavConfiguredUseCase checkWebDavConfiguredUseCase,
   })  : _getNotesUseCase = getNotesUseCase,
         _saveNoteUseCase = saveNoteUseCase,
         _deleteNoteUseCase = deleteNoteUseCase,
@@ -84,7 +94,10 @@ class NotesViewModel extends ChangeNotifier {
         _createFolderUseCase = createFolderUseCase,
         _deleteFolderUseCase = deleteFolderUseCase,
         _clearTrashUseCase = clearTrashUseCase,
-        _deletePermanentlyUseCase = deletePermanentlyUseCase;
+        _deletePermanentlyUseCase = deletePermanentlyUseCase,
+        _syncNoteUseCase = syncNoteUseCase,
+        _downloadNoteUseCase = downloadNoteUseCase,
+        _checkWebDavConfiguredUseCase = checkWebDavConfiguredUseCase;
 
   List<Note> get notes => _notes;
   List<NoteFolder> get folders => _folders;
@@ -94,6 +107,8 @@ class NotesViewModel extends ChangeNotifier {
   String? get error => _error;
   String? get selectedFolderId => _selectedFolderId;
   bool get isInitialized => _isInitialized;
+  bool get isSyncing => _isSyncing;
+  bool get isWebDavConfigured => _isWebDavConfigured;
 
   /// 获取过滤后的笔记列表（置顶在前）
   List<Note> get filteredNotes {
@@ -106,6 +121,95 @@ class NotesViewModel extends ChangeNotifier {
       return b.updatedAt.compareTo(a.updatedAt);
     });
     return filtered;
+  }
+
+  /// 检查 WebDAV 配置状态
+  Future<void> checkWebDavStatus() async {
+    _isWebDavConfigured = _checkWebDavConfiguredUseCase();
+    notifyListeners();
+  }
+
+  /// 同步单条笔记
+  Future<bool> syncNote(String noteId) async {
+    _isSyncing = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final result = await _syncNoteUseCase(noteId);
+      bool success = false;
+      
+      result.fold(
+        (failure) {
+          _error = failure.message;
+          success = false;
+        },
+        (_) {
+          // 同步成功，更新本地笔记状态
+          final index = _notes.indexWhere((n) => n.id == noteId);
+          if (index != -1) {
+            _notes[index] = _notes[index].copyWith(
+              isSynced: true,
+              lastSyncedAt: DateTime.now(),
+            );
+          }
+          if (_currentNote?.id == noteId) {
+            _currentNote = _notes[index];
+          }
+          success = true;
+        },
+      );
+      
+      _isSyncing = false;
+      notifyListeners();
+      return success;
+    } catch (e) {
+      _isSyncing = false;
+      _error = '同步失败：${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// 从云端下载笔记
+  Future<bool> downloadNote(String noteId) async {
+    _isSyncing = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final result = await _downloadNoteUseCase(noteId);
+      bool success = false;
+      
+      result.fold(
+        (failure) {
+          _error = failure.message;
+          success = false;
+        },
+        (note) {
+          // 下载成功，更新本地列表
+          final index = _notes.indexWhere((n) => n.id == noteId);
+          if (index != -1) {
+            _notes[index] = note as Note;
+          } else {
+            _notes.add(note as Note);
+          }
+          if (_currentNote?.id == noteId) {
+            _currentNote = note as Note;
+          }
+          success = true;
+        },
+      );
+      
+      _isSyncing = false;
+      notifyListeners();
+      return success;
+    } catch (e) {
+      _isSyncing = false;
+      _error = '下载失败：${e.toString()}';
+      notifyListeners();
+      return false;
+    }
   }
 
   /// 初始化数据源并加载数据

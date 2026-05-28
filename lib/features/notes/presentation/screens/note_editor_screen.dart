@@ -26,8 +26,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   late quill.QuillController _controller;
   final FocusNode _focusNode = FocusNode();
   bool _isSaving = false;
+  bool _isSyncing = false;
   String _title = '';
   final _titleController = TextEditingController();
+  bool _hasUnsyncedChanges = false;
 
   @override
   void initState() {
@@ -83,6 +85,30 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           onChanged: (value) => _title = value,
         ),
         actions: [
+          // 云同步按钮
+          Consumer<NotesViewModel>(
+            builder: (context, viewModel, child) {
+              final isConfigured = viewModel.isWebDavConfigured;
+              if (!isConfigured) return const SizedBox.shrink();
+              
+              final note = viewModel.currentNote;
+              final isSynced = note?.isSynced ?? false;
+              final lastSyncedAt = note?.lastSyncedAt;
+              
+              return IconButton(
+                icon: _isSyncing 
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(
+                        isSynced ? Icons.cloud_done : Icons.cloud_off,
+                        color: isSynced ? Colors.green : Colors.orange,
+                      ),
+                onPressed: _isSyncing ? null : _syncCurrentNote,
+                tooltip: isSynced 
+                    ? '已同步${lastSyncedAt != null ? '\n${_formatLastSynced(lastSyncedAt)}' : ''}'
+                    : '同步到云端',
+              );
+            },
+          ),
           // 撤销按钮
           IconButton(
             icon: const Icon(Icons.undo),
@@ -204,6 +230,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             content: content,
             updatedAt: DateTime.now(),
           ));
+          // 标记为有未同步的更改
+          setState(() {
+            _hasUnsyncedChanges = true;
+          });
         }
       } else {
         await viewModel.createNote(
@@ -226,6 +256,78 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         );
         setState(() => _isSaving = false);
       }
+    }
+  }
+
+  /// 同步当前笔记到云端
+  Future<void> _syncCurrentNote() async {
+    final viewModel = context.read<NotesViewModel>();
+    final note = viewModel.currentNote;
+    
+    if (note == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('没有可同步的笔记')),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isSyncing = true);
+
+    try {
+      final success = await viewModel.syncNote(note.id);
+      
+      if (mounted) {
+        if (success) {
+          setState(() {
+            _hasUnsyncedChanges = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('同步成功'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 1),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('同步失败：${viewModel.error ?? '未知错误'}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('同步异常：$e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSyncing = false);
+      }
+    }
+  }
+
+  /// 格式化最后同步时间
+  String _formatLastSynced(DateTime lastSyncedAt) {
+    final now = DateTime.now();
+    final diff = now.difference(lastSyncedAt);
+    
+    if (diff.inMinutes < 1) {
+      return '刚刚';
+    } else if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}分钟前';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours}小时前';
+    } else {
+      return '${lastSyncedAt.month}/${lastSyncedAt.day} ${lastSyncedAt.hour}:${lastSyncedAt.minute.toString().padLeft(2, '0')}';
     }
   }
 

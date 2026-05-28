@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/user_info_widget.dart';
 import 'theme_settings_page.dart';
 import 'storage_management_page.dart';
@@ -34,14 +35,10 @@ class ProfilePage extends StatelessWidget {
                   enabled: false,
                 ),
                 _buildListTile(
-                  icon: Icons.cloud_upload_outlined,
-                  title: '云同步',
+                  icon: Icons.cloud_sync_outlined,
+                  title: '云同步设置',
                   subtitle: 'WebDAV 数据同步',
-                  trailing: const Text(
-                    '即将上线',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  enabled: false,
+                  onTap: () => context.push('/profile/sync'),
                 ),
               ],
             ),

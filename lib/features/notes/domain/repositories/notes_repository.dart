@@ -43,4 +43,7 @@ abstract class NotesRepository {
   
   /// 同步笔记
   Future<Either<Failure, Unit>> syncNote(String noteId);
+  
+  /// 从云端下载笔记
+  Future<Either<Failure, Note>> downloadNoteFromCloud(String noteId);
 }

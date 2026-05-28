@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 
 import '../storage/storage_manager.dart';
 import '../services/theme_notifier.dart';
+import '../network/webdav_client.dart';
 import '../../features/base/data/datasources/user_local_datasource.dart';
 import '../../features/base/domain/repositories/user_repository.dart';
 import '../../features/base/data/repositories/user_repository_impl.dart';
@@ -18,6 +19,7 @@ import '../../features/video_editor/presentation/providers/video_provider.dart';
 import '../../features/notes/presentation/viewmodel.dart';
 import '../../features/notes/data/note_datasource.dart';
 import '../../features/notes/data/datasources/trash_datasource.dart';
+import '../../features/notes/data/datasources/remote/notes_remote_datasource.dart';
 import '../../features/notes/data/repositories/notes_repository_impl.dart';
 import '../../features/notes/domain/repositories/notes_repository.dart';
 import '../../features/notes/domain/usecases/get_notes_use_case.dart';
@@ -26,6 +28,9 @@ import '../../features/notes/domain/usecases/delete_note_use_case.dart';
 import '../../features/notes/domain/usecases/move_note_to_trash_use_case.dart';
 import '../../features/notes/domain/usecases/restore_from_trash_use_case.dart';
 import '../../features/notes/domain/usecases/get_folders_use_case.dart';
+import '../../features/notes/domain/usecases/sync_note_use_case.dart';
+import '../../features/notes/domain/usecases/download_note_use_case.dart';
+import '../../features/notes/domain/usecases/check_webdav_configured_use_case.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -33,6 +38,11 @@ Future<void> initDependencies() async {
   // 外部依赖
   sl.registerLazySingleton<StorageManager>(() => StorageManager());
   sl.registerFactory<ThemeNotifier>(() => ThemeNotifier());
+  
+  // WebDAV Client (需要在其他依赖之前初始化)
+  final webDavClient = WebDavClient();
+  await webDavClient.init();
+  sl.registerLazySingleton<WebDavClient>(() => webDavClient);
 
   // Base / User
   sl.registerLazySingleton<UserLocalDataSource>(
@@ -77,12 +87,19 @@ Future<void> initDependencies() async {
     ds.init();
     return ds;
   });
+  
+  // Notes Remote Data Source (WebDAV)
+  sl.registerLazySingleton<NotesRemoteDataSource>(
+    () => NotesRemoteDataSource(sl<WebDavClient>()),
+  );
 
   // Notes - Repository
   sl.registerLazySingleton<NotesRepository>(
     () => NotesRepositoryImpl(
       localDataSource: sl<NotesDataSource>(),
       trashDataSource: sl<TrashDataSource>(),
+      remoteDataSource: sl<NotesRemoteDataSource>(),
+      webDavClient: sl<WebDavClient>(),
     ),
   );
 
@@ -104,6 +121,13 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<DeleteFolderUseCase>(() => DeleteFolderUseCase(sl()));
   sl.registerLazySingleton<ClearTrashUseCase>(() => ClearTrashUseCase(sl()));
   sl.registerLazySingleton<DeletePermanentlyUseCase>(() => DeletePermanentlyUseCase(sl()));
+  
+  // Notes - Sync Use Cases
+  sl.registerLazySingleton<SyncNoteUseCase>(() => SyncNoteUseCase(sl()));
+  sl.registerLazySingleton<DownloadNoteUseCase>(() => DownloadNoteUseCase(sl()));
+  sl.registerLazySingleton<CheckWebDavConfiguredUseCase>(
+    () => CheckWebDavConfiguredUseCase(() => sl<NotesRepository>().isWebDavConfigured),
+  );
 
   // Notes - Provider (updated to use UseCases)
   sl.registerFactory<NotesViewModel>(
@@ -118,6 +142,9 @@ Future<void> initDependencies() async {
       deleteFolderUseCase: sl(),
       clearTrashUseCase: sl(),
       deletePermanentlyUseCase: sl(),
+      syncNoteUseCase: sl(),
+      downloadNoteUseCase: sl(),
+      checkWebDavConfiguredUseCase: sl(),
     ),
   );
 
