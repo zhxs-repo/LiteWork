@@ -45,10 +45,10 @@ class _SearchScreenState extends State<SearchScreen> {
     return results;
   }
 
-  /// 从 Hive video_projects_box 搜索视频项目
+  /// 从 Hive video_projects 搜索视频项目
   List<SearchResult> _searchVideoProjects(String query) {
     final results = <SearchResult>[];
-    final box = Hive.box<Map>('video_projects_box');
+    final box = Hive.box<Map>('video_projects');
     final lowerQuery = query.toLowerCase();
 
     for (final entry in box.toMap().entries) {

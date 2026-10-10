@@ -6,6 +6,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
+import 'core/storage/hive_bootstrap.dart';
 import 'core/storage/storage_manager.dart';
 import 'core/services/theme_notifier.dart';
 import 'core/di/injection_container.dart' as di;
@@ -19,14 +20,14 @@ import 'screens/onboarding_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 初始化 Hive
-  await Hive.initFlutter();
+  // 初始化 Hive（数据存放在应用私有目录，见 hive_bootstrap.dart）
+  await initHive();
 
   // 打开需要的 Box
   await Future.wait([
     Hive.openBox<Map>('posts_box'),
     Hive.openBox<Map>('notes_box'),
-    Hive.openBox<Map>('video_projects_box'),
+    Hive.openBox<Map>('video_projects'),
     Hive.openBox<Map>('trash_box'),
     Hive.openBox<Map>('folders_box'),
     Hive.openBox('onboarding_box'),

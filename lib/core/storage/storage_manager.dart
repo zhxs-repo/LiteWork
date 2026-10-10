@@ -186,7 +186,7 @@ class StorageKeys {
   // Hive Box 名称
   static const String postsBox = 'posts_box';
   static const String notesBox = 'notes_box';
-  static const String videoProjectsBox = 'video_projects_box';
+  static const String videoProjectsBox = 'video_projects';
   static const String trashBox = 'trash_box';
   static const String foldersBox = 'folders_box';
 
