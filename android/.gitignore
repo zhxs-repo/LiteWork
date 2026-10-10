@@ -1,8 +1,10 @@
-gradle-wrapper.jar
+# Gradle Wrapper 纳入版本控制，保证 CI 与其他协作者可直接执行 ./gradlew 构建。
+# 以下三项来自 Flutter 官方模板的默认忽略规则，此处显式放行。
+# gradle-wrapper.jar
 /.gradle
 /captures/
-/gradlew
-/gradlew.bat
+# /gradlew
+# /gradlew.bat
 /local.properties
 GeneratedPluginRegistrant.java
 .cxx/

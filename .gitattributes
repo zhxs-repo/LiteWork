@@ -1,0 +1,6 @@
+# Gradle Wrapper 脚本必须在 Linux/macOS 下保持 LF 换行，
+# 否则执行时会报 "/bin/sh^M: bad interpreter" 导致构建失败。
+android/gradlew text eol=lf
+
+# Windows 批处理脚本使用 CRLF
+*.bat text eol=crlf
