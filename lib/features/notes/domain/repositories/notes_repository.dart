@@ -1,6 +1,6 @@
-/// 笔记模块 - Repository 抽象接口
-/// 
-/// 定义领域层与数据层的契约，确保依赖倒置
+// 笔记模块 - Repository 抽象接口
+// 
+// 定义领域层与数据层的契约，确保依赖倒置
 
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failure.dart';
@@ -46,4 +46,7 @@ abstract class NotesRepository {
   
   /// 从云端下载笔记
   Future<Either<Failure, Note>> downloadNoteFromCloud(String noteId);
+
+  /// WebDAV 是否已配置
+  bool get isWebDavConfigured;
 }

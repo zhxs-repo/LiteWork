@@ -174,21 +174,32 @@ class ExportConfigScreen extends StatelessWidget {
   }
 
   Widget _buildRadioList(VideoProvider provider, String type, List<Map<String, String>> options) {
-    return Column(
-      children: options.map((opt) {
-        return RadioListTile<String>(
-          title: Text(opt['label']!),
-          value: opt['value']!,
-          groupValue: type == 'resolution' ? provider.resolution
-                   : type == 'frameRate' ? provider.frameRate
-                   : provider.aspectRatio,
-          onChanged: (val) {
-            if (type == 'resolution') provider.setResolution(val!);
-            else if (type == 'frameRate') provider.setFrameRate(val!);
-            else provider.setAspectRatio(val!);
-          },
-        );
-      }).toList(),
+    final groupValue = type == 'resolution'
+        ? provider.resolution
+        : type == 'frameRate'
+            ? provider.frameRate
+            : provider.aspectRatio;
+
+    return RadioGroup<String>(
+      groupValue: groupValue,
+      onChanged: (val) {
+        if (val == null) return;
+        if (type == 'resolution') {
+          provider.setResolution(val);
+        } else if (type == 'frameRate') {
+          provider.setFrameRate(val);
+        } else {
+          provider.setAspectRatio(val);
+        }
+      },
+      child: Column(
+        children: options.map((opt) {
+          return RadioListTile<String>(
+            title: Text(opt['label']!),
+            value: opt['value']!,
+          );
+        }).toList(),
+      ),
     );
   }
 }

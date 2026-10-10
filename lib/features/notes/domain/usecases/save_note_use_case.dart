@@ -1,4 +1,4 @@
-/// 保存笔记用例
+// 保存笔记用例
 
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failure.dart';

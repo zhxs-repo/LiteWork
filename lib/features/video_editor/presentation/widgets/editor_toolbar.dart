@@ -33,27 +33,27 @@ class EditorToolbar extends StatelessWidget {
             enabled: hasSelection,
             onTap: onDelete,
           ),
-          _ToolbarButton(
+          const _ToolbarButton(
             icon: Icons.speed,
             label: '变速',
             tooltip: '即将上线',
           ),
-          _ToolbarButton(
+          const _ToolbarButton(
             icon: Icons.flip,
             label: '倒放',
             tooltip: '即将上线',
           ),
-          _ToolbarButton(
+          const _ToolbarButton(
             icon: Icons.filter,
             label: '滤镜',
             tooltip: '即将上线',
           ),
-          _ToolbarButton(
+          const _ToolbarButton(
             icon: Icons.text_fields,
             label: '字幕',
             tooltip: '即将上线',
           ),
-          _ToolbarButton(
+          const _ToolbarButton(
             icon: Icons.music_note,
             label: '音频',
             tooltip: '即将上线',

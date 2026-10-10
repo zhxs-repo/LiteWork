@@ -226,7 +226,7 @@ class _NotesListScreenState extends State<NotesListScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: typeColor.withOpacity(0.1),
+                      color: typeColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(typeIcon, color: typeColor, size: 20),
@@ -506,33 +506,6 @@ class _NotesListScreenState extends State<NotesListScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('取消'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmDelete(BuildContext context, Note note, NotesViewModel viewModel) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除笔记'),
-        content: Text('确定要删除"${note.title}"吗？此操作不可恢复。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              viewModel.deleteNote(note.id);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('笔记已删除')),
-              );
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('删除'),
           ),
         ],
       ),

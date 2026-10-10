@@ -1,6 +1,6 @@
-/// 笔记模块 - Repository 实现
-/// 
-/// 实现 NotesRepository 接口，协调本地和远程数据源
+// 笔记模块 - Repository 实现
+// 
+// 实现 NotesRepository 接口，协调本地和远程数据源
 
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failure.dart';
@@ -154,7 +154,7 @@ class NotesRepositoryImpl implements NotesRepository {
     try {
       final result = await _trashDataSource.restore(itemId);
       if (result == null) {
-        return Left(CacheFailure('项目不存在'));
+        return const Left(CacheFailure('项目不存在'));
       }
 
       final type = result['type'] as String;
@@ -230,7 +230,7 @@ class NotesRepositoryImpl implements NotesRepository {
     try {
       // 检查 WebDAV 是否已配置
       if (!_webDavClient.isConfigured) {
-        return Left(SyncFailure('WebDAV 未配置，请先设置同步服务器'));
+        return const Left(SyncFailure('WebDAV 未配置，请先设置同步服务器'));
       }
       
       // 获取本地笔记
@@ -265,7 +265,7 @@ class NotesRepositoryImpl implements NotesRepository {
   Future<Either<Failure, Note>> downloadNoteFromCloud(String noteId) async {
     try {
       if (!_webDavClient.isConfigured) {
-        return Left(SyncFailure('WebDAV 未配置，请先设置同步服务器'));
+        return const Left(SyncFailure('WebDAV 未配置，请先设置同步服务器'));
       }
       
       final note = await _remoteDataSource.downloadNote(noteId);
@@ -282,5 +282,6 @@ class NotesRepositoryImpl implements NotesRepository {
   }
   
   /// 检查 WebDAV 配置状态
+  @override
   bool get isWebDavConfigured => _webDavClient.isConfigured;
 }

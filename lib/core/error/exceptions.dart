@@ -1,6 +1,6 @@
-/// 基础异常类 - 用于 Data 层异常抛出
-/// 
-/// 这些异常会在 Repository 层被捕获并转换为 Failure
+// 基础异常类 - 用于 Data 层异常抛出
+// 
+// 这些异常会在 Repository 层被捕获并转换为 Failure
 
 /// 缓存异常 - Hive/本地存储相关
 class CacheException implements Exception {

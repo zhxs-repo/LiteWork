@@ -12,13 +12,13 @@ class TimelineCanvas extends StatefulWidget {
   final double zoomLevel; // 像素/秒
 
   const TimelineCanvas({
-    Key? key,
+    super.key,
     required this.timelineData,
     required this.onSegmentSelected,
     required this.onSeek,
     this.onClipMoved,
     this.zoomLevel = 50.0,
-  }) : super(key: key);
+  });
 
   @override
   State<TimelineCanvas> createState() => _TimelineCanvasState();
@@ -30,13 +30,6 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
   int? _draggedSegmentId;
   double _dragStartX = 0;
   double _dragStartPosition = 0;
-
-  Offset? _localToTime(double globalDx) {
-    final renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null || !renderBox.hasSize) return null;
-    final local = renderBox.globalToLocal(Offset(globalDx, 0));
-    return local;
-  }
 
   int? _hitTestSegment(double clickTimeSeconds) {
     for (var track in widget.timelineData.tracks) {
@@ -194,8 +187,8 @@ class TimelinePainter extends CustomPainter {
     }
 
     // 2. 绘制轨道和片段
-    final trackHeight = 60.0;
-    final trackGap = 10.0;
+    const trackHeight = 60.0;
+    const trackGap = 10.0;
     
     for (int i = 0; i < timelineData.tracks.length; i++) {
       final track = timelineData.tracks[i];
@@ -210,7 +203,7 @@ class TimelinePainter extends CustomPainter {
       // 绘制片段
       for (var segment in track.segments) {
         var x = segment.startTime * zoomLevel;
-        final w = segment.duration * zoomLevel;
+        final w = math.max(0.0, segment.duration * zoomLevel);
         final isSelected = segment.id == selectedSegmentId;
         final isDragged = segment.id == draggedSegmentId;
 
@@ -218,16 +211,20 @@ class TimelinePainter extends CustomPainter {
           x += dragDelta * zoomLevel;
         }
 
+        final clipWidth = math.max(0.0, w - 2);
+        final clipRect = Rect.fromLTWH(x, yOffset + 2, clipWidth, trackHeight - 4);
+        if (clipWidth <= 0) continue;
+
         // 片段背景
         canvas.drawRect(
-          Rect.fromLTWH(x, yOffset + 2, w - 2, trackHeight - 4),
+          clipRect,
           Paint()..color = isDragged ? Colors.orange : (isSelected ? Colors.blue : _getTrackColor(track.type)),
         );
 
         // 选中边框
         if (isSelected && !isDragged) {
           canvas.drawRect(
-            Rect.fromLTWH(x, yOffset + 2, w - 2, trackHeight - 4),
+            clipRect,
             Paint()
               ..color = Colors.white
               ..style = PaintingStyle.stroke
@@ -237,22 +234,25 @@ class TimelinePainter extends CustomPainter {
 
         if (isDragged) {
           canvas.drawRect(
-            Rect.fromLTWH(x, yOffset + 2, w - 2, trackHeight - 4),
+            clipRect,
             Paint()..color = Colors.white24..style = PaintingStyle.stroke..strokeWidth = 2,
           );
         }
 
         // 片段文本 (文件名)
-        paintText.text = TextSpan(
-          text: segment.name,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.white70, 
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal
-          ),
-        );
-        paintText.layout(maxWidth: w - 10);
-        paintText.paint(canvas, Offset(x + 5, yOffset + trackHeight / 2 - paintText.height / 2));
+        final textWidth = w - 10;
+        if (textWidth > 0) {
+          paintText.text = TextSpan(
+            text: segment.name,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.white70, 
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal
+            ),
+          );
+          paintText.layout(maxWidth: textWidth);
+          paintText.paint(canvas, Offset(x + 5, yOffset + trackHeight / 2 - paintText.height / 2));
+        }
       }
     }
 

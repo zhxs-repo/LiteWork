@@ -1,4 +1,4 @@
-/// 笔记管理 ViewModel - 基于 UseCase 的 Clean Architecture 实现
+// 笔记管理 ViewModel - 基于 UseCase 的 Clean Architecture 实现
 
 import 'package:flutter/foundation.dart';
 import '../domain/models.dart';
@@ -13,7 +13,8 @@ import '../domain/usecases/delete_folder_usecase.dart';
 import '../domain/usecases/clear_trash_usecase.dart';
 import '../domain/usecases/delete_permanently_usecase.dart';
 import '../domain/usecases/sync_note_use_case.dart';
-import '../../../../core/error/failure.dart';
+import '../domain/usecases/download_note_use_case.dart';
+import '../domain/usecases/check_webdav_configured_use_case.dart';
 
 /// 回收站项目模型
 class TrashItem {
@@ -67,7 +68,6 @@ class NotesViewModel extends ChangeNotifier {
   String? _error;
   String? _selectedFolderId;
   bool _isInitialized = false;
-  bool _isTrashInitialized = false;
   bool _isSyncing = false;
   bool _isWebDavConfigured = false;
 
@@ -190,12 +190,12 @@ class NotesViewModel extends ChangeNotifier {
           // 下载成功，更新本地列表
           final index = _notes.indexWhere((n) => n.id == noteId);
           if (index != -1) {
-            _notes[index] = note as Note;
+            _notes[index] = note;
           } else {
-            _notes.add(note as Note);
+            _notes.add(note);
           }
           if (_currentNote?.id == noteId) {
-            _currentNote = note as Note;
+            _currentNote = note;
           }
           success = true;
         },
@@ -456,7 +456,6 @@ class NotesViewModel extends ChangeNotifier {
           if (_currentNote?.id == note.id) {
             _currentNote = null;
           }
-          _isTrashInitialized = false;
           _isLoading = false;
           notifyListeners();
         },
@@ -563,7 +562,6 @@ class NotesViewModel extends ChangeNotifier {
     try {
       await _clearTrashUseCase();
       _trashItems.clear();
-      _isTrashInitialized = false;
       notifyListeners();
     } catch (e) {
       _error = e.toString();

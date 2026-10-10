@@ -1,7 +1,7 @@
-/// 基础失败类 - 用于函数式错误处理
-/// 
-/// 在 Clean Architecture 中，Failure 用于表示业务逻辑层的错误
-/// 使用 Either<Failure, T> 模式进行错误传播
+// 基础失败类 - 用于函数式错误处理
+// 
+// 在 Clean Architecture 中，Failure 用于表示业务逻辑层的错误
+// 使用 Either<Failure, T> 模式进行错误传播
 
 import 'package:equatable/equatable.dart';
 

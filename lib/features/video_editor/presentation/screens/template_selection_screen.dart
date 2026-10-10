@@ -40,15 +40,21 @@ class _QuickCreateScreenState extends State<QuickCreateScreen> {
           const SizedBox(height: 24),
           const Text('画面比例', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          ...['9:16 (竖屏)', '16:9 (横屏)', '1:1 (方形)'].map((label) {
-            final value = label.split(' ')[0];
-            return RadioListTile<String>(
-              title: Text(label),
-              value: value,
-              groupValue: _aspectRatio,
-              onChanged: (val) => setState(() => _aspectRatio = val!),
-            );
-          }),
+          RadioGroup<String>(
+            groupValue: _aspectRatio,
+            onChanged: (val) {
+              if (val != null) setState(() => _aspectRatio = val);
+            },
+            child: Column(
+              children: ['9:16 (竖屏)', '16:9 (横屏)', '1:1 (方形)'].map((label) {
+                final value = label.split(' ')[0];
+                return RadioListTile<String>(
+                  title: Text(label),
+                  value: value,
+                );
+              }).toList(),
+            ),
+          ),
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,

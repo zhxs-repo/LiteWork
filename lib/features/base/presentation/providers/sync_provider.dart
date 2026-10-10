@@ -1,6 +1,6 @@
-/// 同步状态 Provider
-/// 
-/// 管理 WebDAV 同步配置状态和同步操作
+// 同步状态 Provider
+// 
+// 管理 WebDAV 同步配置状态和同步操作
 
 import 'package:flutter/foundation.dart';
 import '../../../../core/di/injection_container.dart' as di;

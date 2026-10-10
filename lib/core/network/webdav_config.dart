@@ -1,6 +1,6 @@
-/// WebDAV 客户端配置模型
-/// 
-/// 用于存储和管理 WebDAV 服务器连接信息
+// WebDAV 客户端配置模型
+// 
+// 用于存储和管理 WebDAV 服务器连接信息
 
 import 'package:equatable/equatable.dart';
 

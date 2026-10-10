@@ -155,7 +155,7 @@ class _VideoListScreenState extends State<VideoListScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
+                            color: statusColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -291,7 +291,7 @@ class _VideoListScreenState extends State<VideoListScreen> {
   void _openProject(BuildContext context, String projectId) {
     final provider = context.read<VideoProvider>();
     provider.openProject(projectId);
-    context.push('${AppRoutes.videoEditorEdit.replaceAll(':id', projectId)}');
+    context.push(AppRoutes.videoEditorEdit.replaceAll(':id', projectId));
   }
 
   void _handleMenuAction(BuildContext context, VideoProject project, String action, VideoProvider provider) {

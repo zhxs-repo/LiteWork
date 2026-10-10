@@ -60,7 +60,7 @@ class ThemeSettingsPage extends StatelessWidget {
                       '• 暗色模式：护眼舒适，适合夜间使用\n'
                       '• 跟随系统：自动匹配系统主题',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -86,46 +86,49 @@ class ThemeSettingsPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Card(
-                  child: Column(
-                    children: [
-                      _buildThemeOption(
-                        icon: Icons.light_mode,
-                        title: '亮色模式',
-                        subtitle: '清爽明亮的界面',
-                        value: 'light',
-                        groupValue: selectedMode,
-                        onChanged: (mode) => _changeTheme(context, mode),
-                        theme: theme,
-                      ),
-                      Divider(
-                        height: 1,
-                        indent: 72,
-                        color: theme.dividerColor.withOpacity(0.5),
-                      ),
-                      _buildThemeOption(
-                        icon: Icons.dark_mode,
-                        title: '暗色模式',
-                        subtitle: '护眼舒适的深色界面',
-                        value: 'dark',
-                        groupValue: selectedMode,
-                        onChanged: (mode) => _changeTheme(context, mode),
-                        theme: theme,
-                      ),
-                      Divider(
-                        height: 1,
-                        indent: 72,
-                        color: theme.dividerColor.withOpacity(0.5),
-                      ),
-                      _buildThemeOption(
-                        icon: Icons.brightness_auto,
-                        title: '跟随系统',
-                        subtitle: '自动匹配系统主题设置',
-                        value: 'system',
-                        groupValue: selectedMode,
-                        onChanged: (mode) => _changeTheme(context, mode),
-                        theme: theme,
-                      ),
-                    ],
+                  child: RadioGroup<String>(
+                    groupValue: selectedMode,
+                    onChanged: (mode) {
+                      if (mode != null) _changeTheme(context, mode);
+                    },
+                    child: Column(
+                      children: [
+                        _buildThemeOption(
+                          icon: Icons.light_mode,
+                          title: '亮色模式',
+                          subtitle: '清爽明亮的界面',
+                          value: 'light',
+                          groupValue: selectedMode,
+                          theme: theme,
+                        ),
+                        Divider(
+                          height: 1,
+                          indent: 72,
+                          color: theme.dividerColor.withValues(alpha: 0.5),
+                        ),
+                        _buildThemeOption(
+                          icon: Icons.dark_mode,
+                          title: '暗色模式',
+                          subtitle: '护眼舒适的深色界面',
+                          value: 'dark',
+                          groupValue: selectedMode,
+                          theme: theme,
+                        ),
+                        Divider(
+                          height: 1,
+                          indent: 72,
+                          color: theme.dividerColor.withValues(alpha: 0.5),
+                        ),
+                        _buildThemeOption(
+                          icon: Icons.brightness_auto,
+                          title: '跟随系统',
+                          subtitle: '自动匹配系统主题设置',
+                          value: 'system',
+                          groupValue: selectedMode,
+                          theme: theme,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -187,7 +190,7 @@ class ThemeSettingsPage extends StatelessWidget {
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceVariant,
+                            color: theme.colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Column(
@@ -197,7 +200,7 @@ class ThemeSettingsPage extends StatelessWidget {
                                 height: 12,
                                 width: 120,
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary.withOpacity(0.3),
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
@@ -206,7 +209,7 @@ class ThemeSettingsPage extends StatelessWidget {
                                 height: 8,
                                 width: double.infinity,
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.onSurface.withOpacity(0.1),
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
@@ -215,7 +218,7 @@ class ThemeSettingsPage extends StatelessWidget {
                                 height: 8,
                                 width: 200,
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.onSurface.withOpacity(0.1),
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
@@ -283,20 +286,17 @@ class ThemeSettingsPage extends StatelessWidget {
     required String subtitle,
     required String value,
     required String groupValue,
-    required ValueChanged<String> onChanged,
     required ThemeData theme,
   }) {
     final isSelected = value == groupValue;
 
     return RadioListTile<String>(
       value: value,
-      groupValue: groupValue,
-      onChanged: (v) => onChanged(v!),
       secondary: Icon(
         icon,
         color: isSelected
             ? theme.colorScheme.primary
-            : theme.colorScheme.onSurface.withOpacity(0.5),
+            : theme.colorScheme.onSurface.withValues(alpha: 0.5),
       ),
       title: Text(
         title,
@@ -310,7 +310,7 @@ class ThemeSettingsPage extends StatelessWidget {
       subtitle: Text(
         subtitle,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurface.withOpacity(0.6),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
         ),
       ),
       activeColor: theme.colorScheme.primary,

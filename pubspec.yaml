@@ -30,6 +30,10 @@ dependencies:
   
   # 富文本编辑器
   flutter_quill: ^11.5.0
+  dart_quill_delta: ^10.8.3
+
+  # 工具
+  path: ^1.9.1
 
   # 视频与媒体处理
   video_player: ^2.9.2
@@ -43,6 +47,7 @@ dependencies:
   # 网络与数据同步
   dio: ^5.7.0
   http: ^1.1.0
+  xml: ^6.5.0
   flutter_secure_storage: ^9.0.0
   connectivity_plus: ^5.0.0
   

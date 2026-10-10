@@ -220,7 +220,48 @@ class _HomeLayoutState extends State<HomeLayout> {
     } else {
       _selectedIndex = 0;
     }
-    
+
+    // 平板 / 桌面端使用左侧导航栏，手机端使用底部导航栏
+    final isWide = MediaQuery.sizeOf(context).width >= 600;
+
+    if (isWide) {
+      return Scaffold(
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: _onItemTapped,
+              labelType: NavigationRailLabelType.all,
+              destinations: const [
+                NavigationRailDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home),
+                  label: Text('首页'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.publish_outlined),
+                  selectedIcon: Icon(Icons.publish),
+                  label: Text('发布'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.video_library_outlined),
+                  selectedIcon: Icon(Icons.video_library),
+                  label: Text('剪辑'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.note_outlined),
+                  selectedIcon: Icon(Icons.note),
+                  label: Text('笔记'),
+                ),
+              ],
+            ),
+            const VerticalDivider(width: 1, thickness: 1),
+            Expanded(child: widget.child),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       body: widget.child,
       bottomNavigationBar: BottomNavigationBar(

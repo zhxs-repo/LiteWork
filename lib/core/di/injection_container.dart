@@ -28,6 +28,10 @@ import '../../features/notes/domain/usecases/delete_note_use_case.dart';
 import '../../features/notes/domain/usecases/move_note_to_trash_use_case.dart';
 import '../../features/notes/domain/usecases/restore_from_trash_use_case.dart';
 import '../../features/notes/domain/usecases/get_folders_use_case.dart';
+import '../../features/notes/domain/usecases/create_folder_usecase.dart';
+import '../../features/notes/domain/usecases/delete_folder_usecase.dart';
+import '../../features/notes/domain/usecases/clear_trash_usecase.dart';
+import '../../features/notes/domain/usecases/delete_permanently_usecase.dart';
 import '../../features/notes/domain/usecases/sync_note_use_case.dart';
 import '../../features/notes/domain/usecases/download_note_use_case.dart';
 import '../../features/notes/domain/usecases/check_webdav_configured_use_case.dart';
@@ -169,16 +173,12 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<DeletePostUseCase>(
     () => DeletePostUseCase(sl()),
   );
-  sl.registerLazySingleton<GetDraftsUseCase>(
-    () => GetDraftsUseCase(sl()),
-  );
   sl.registerFactory<PostProvider>(
     () => PostProvider(
       getAllPosts: sl(),
       getPostById: sl(),
       savePost: sl(),
       deletePost: sl(),
-      getDrafts: sl(),
     ),
   );
 

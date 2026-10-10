@@ -128,9 +128,7 @@ class ProfilePage extends StatelessWidget {
       leading: Icon(icon, color: enabled ? Colors.blue : Colors.grey),
       title: Text(title),
       subtitle: subtitle != null ? Text(subtitle) : null,
-      trailing: trailing != null
-          ? trailing
-          : (enabled ? const Icon(Icons.chevron_right) : null),
+      trailing: trailing ?? (enabled ? const Icon(Icons.chevron_right) : null),
       onTap: enabled ? onTap : null,
     );
   }

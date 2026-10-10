@@ -238,7 +238,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                             ListTile(
                               leading: Icon(
                                 Icons.info_outline,
-                                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                               title: const Text('缓存说明'),
                               subtitle: Text(
@@ -309,7 +309,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Card(
-                    color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
@@ -323,7 +323,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                             child: Text(
                               '提示：定期清理缓存可以释放存储空间，提高应用运行速度',
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface.withOpacity(0.8),
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
                               ),
                             ),
                           ),
@@ -353,7 +353,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
           label,
           style: TextStyle(
             fontSize: 14,
-            color: color.withOpacity(0.8),
+            color: color.withValues(alpha: 0.8),
           ),
         ),
         const SizedBox(height: 4),

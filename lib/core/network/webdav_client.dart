@@ -1,11 +1,12 @@
-/// WebDAV 客户端服务
-/// 
-/// 提供与 WebDAV 服务器的完整交互功能，支持文件上传、下载、删除等操作
-/// 遵循 RFC 4918 WebDAV 标准
+// WebDAV 客户端服务
+// 
+// 提供与 WebDAV 服务器的完整交互功能，支持文件上传、下载、删除等操作
+// 遵循 RFC 4918 WebDAV 标准
 
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:xml/xml.dart';
 import '../error/exceptions.dart';
 import 'webdav_config.dart';
 
@@ -62,7 +63,7 @@ class WebDavClient {
           throw NetworkException('资源不存在：${error.requestOptions.path}');
         } else if (error.type == DioExceptionType.connectionTimeout ||
                    error.type == DioExceptionType.receiveTimeout) {
-          throw NetworkException('网络连接超时');
+          throw const NetworkException('网络连接超时');
         }
         return handler.next(error);
       },
@@ -206,7 +207,7 @@ class WebDavClient {
       if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
         throw const AuthException('WebDAV 认证失败或权限不足');
       } else if (e.type == DioExceptionType.connectionTimeout) {
-        throw NetworkException('上传超时，请检查网络连接');
+        throw const NetworkException('上传超时，请检查网络连接');
       }
       throw NetworkException('上传失败：${e.message}');
     } catch (e) {
@@ -236,7 +237,7 @@ class WebDavClient {
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
-        throw NetworkException('远程文件不存在');
+        throw const NetworkException('远程文件不存在');
       } else if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
         throw const AuthException('WebDAV 认证失败或权限不足');
       }
@@ -294,11 +295,12 @@ class WebDavClient {
     
     try {
       final path = remotePath.startsWith('/') ? remotePath : '/$remotePath';
-      
+
       final response = await _dio.request(
         path,
         options: Options(
           method: 'PROPFIND',
+          responseType: ResponseType.plain,
           headers: {
             'Depth': '1',
             'Content-Type': 'application/xml',
@@ -314,16 +316,41 @@ class WebDavClient {
   </d:prop>
 </d:propfind>''',
       );
-      
-      // 解析 XML 响应 (简化处理，实际项目可使用 xml 包)
+
+      final body = response.data?.toString() ?? '';
+      final normalizedSelf = _normalizeHref(path);
       final items = <String>[];
-      // TODO: 使用 xml 包解析 DAV 响应
+      final document = XmlDocument.parse(body);
+      // 遍历每个 <response>，findAllElements 按本地名匹配，与命名空间前缀无关
+      for (final resp in document.findAllElements('response')) {
+        final hrefElements = resp.findElements('href');
+        if (hrefElements.isEmpty) continue;
+        final href = Uri.decodeFull(hrefElements.first.innerText.trim());
+        if (href.isEmpty) continue;
+        final normalized = _normalizeHref(href);
+        // 跳过目录自身
+        if (normalized == normalizedSelf) continue;
+        // 只收集文件，跳过子目录（resourcetype 含 <collection/>）
+        if (resp.findAllElements('collection').isNotEmpty) continue;
+        items.add(normalized.split('/').last);
+      }
       return items;
     } on DioException catch (e) {
       throw NetworkException('列出目录失败：${e.message}');
+    } on XmlException {
+      throw const NetworkException('解析目录列表失败：服务器返回了无效的 XML');
     } catch (e) {
+      if (e is NetworkException) rethrow;
       throw NetworkException('列出目录失败：$e');
     }
+  }
+
+  /// 去除末尾斜杠，用于 href 路径比较
+  String _normalizeHref(String href) {
+    if (href.endsWith('/')) {
+      return href.substring(0, href.length - 1);
+    }
+    return href;
   }
   
   // ==================== 辅助方法 ====================

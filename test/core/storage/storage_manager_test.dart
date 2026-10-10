@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,12 +8,11 @@ import 'package:litework/core/storage/storage_manager.dart';
 void main() {
   group('StorageManager Tests', () {
     late StorageManager storageManager;
-    late SharedPreferences sharedPreferences;
 
     setUp(() async {
       // 使用真实的 SharedPreferences 实例进行测试
       SharedPreferences.setMockInitialValues({});
-      sharedPreferences = await SharedPreferences.getInstance();
+      await SharedPreferences.getInstance();
       storageManager = StorageManager();
       await storageManager.init();
     });

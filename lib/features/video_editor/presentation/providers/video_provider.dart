@@ -19,7 +19,7 @@ class VideoProvider extends ChangeNotifier {
 
   // 当前编辑的项目
   domain.VideoProject? _currentProject;
-  List<MediaItem> _availableMedia = [];
+  final List<MediaItem> _availableMedia = [];
   List<TimelineClip> _clips = [];
 
   // 导出配置
@@ -443,8 +443,8 @@ class VideoProvider extends ChangeNotifier {
         if (media.path.isEmpty) continue;
 
         // 计算修剪后的实际时长
-        final trimStartMs = clip.trimStartMs ?? 0;
-        final trimEndMs = clip.trimEndMs ?? media.durationMs;
+        final trimStartMs = clip.trimStartMs;
+        final trimEndMs = clip.trimEndMs;
         final actualDurationMs = (trimEndMs - trimStartMs).clamp(0, media.durationMs);
 
         clipsData.add({
@@ -495,7 +495,7 @@ class VideoProvider extends ChangeNotifier {
         await _dataSource.saveMedia(exportedMedia);
         _availableMedia.add(exportedMedia);
         
-        print('视频导出成功：$resultPath');
+        debugPrint('视频导出成功：$resultPath');
       } else {
         throw Exception('FFmpeg 渲染失败');
       }

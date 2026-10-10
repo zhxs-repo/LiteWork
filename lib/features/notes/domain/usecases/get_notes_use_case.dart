@@ -1,6 +1,6 @@
-/// 获取所有笔记用例
-/// 
-/// Clean Architecture UseCase - 单一职责
+// 获取所有笔记用例
+// 
+// Clean Architecture UseCase - 单一职责
 
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failure.dart';

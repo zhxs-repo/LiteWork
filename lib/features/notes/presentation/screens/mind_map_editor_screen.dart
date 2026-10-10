@@ -26,7 +26,6 @@ class MindMapEditorScreen extends StatefulWidget {
 class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
   final GlobalKey _repaintKey = GlobalKey();
   MindMapData? _mindMapData;
-  String _title = '思维导图';
   bool _isSaving = false;
   String? _selectedNodeId;
   final _titleController = TextEditingController();
@@ -43,7 +42,6 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
         final note = viewModel.currentNote;
         if (note != null) {
           setState(() {
-            _title = note.title;
             _titleController.text = note.title;
             _mindMapData = note.mindMapData ?? _createDefaultMindMap();
           });
@@ -98,7 +96,6 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
             border: InputBorder.none,
             hintStyle: TextStyle(color: Colors.white70),
           ),
-          onChanged: (value) => _title = value,
         ),
         actions: [
           IconButton(
@@ -157,8 +154,8 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddNodeDialog,
-        child: const Icon(Icons.add),
         tooltip: '添加节点',
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -385,14 +382,14 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
   void _changeLayout() {
     if (_mindMapData == null) return;
 
-    final layouts = MindMapLayout.values;
+    const layouts = MindMapLayout.values;
     final currentIndex = layouts.indexOf(_mindMapData!.layout);
     final nextIndex = (currentIndex + 1) % layouts.length;
     final newLayout = layouts[nextIndex];
 
     final updatedNodes = Map<String, MindMapNode>.from(_mindMapData!.nodes);
-    final cx = 400.0;
-    final cy = 300.0;
+    const cx = 400.0;
+    const cy = 300.0;
 
     // Reposition root
     final root = _mindMapData!.root.copyWith(x: cx, y: cy);
@@ -425,7 +422,7 @@ class _MindMapEditorScreenState extends State<MindMapEditorScreen> {
       case MindMapLayout.radial:
         for (int i = 0; i < children.length; i++) {
           final angle = (2 * math.pi * i) / children.length - math.pi / 2;
-          final r = 200.0;
+          const r = 200.0;
           final child = children[i];
           updatedNodes[child.id] = child.copyWith(
             x: cx + r * math.cos(angle),
@@ -741,7 +738,7 @@ class MindMapPainter extends CustomPainter {
     );
     
     textPainter.layout();
-    final padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 8);
+    const padding = EdgeInsets.symmetric(horizontal: 16, vertical: 8);
     final nodeSize = Size(
       textPainter.width + padding.horizontal,
       textPainter.height + padding.vertical,

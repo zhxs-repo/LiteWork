@@ -1,20 +1,22 @@
 import 'package:ffmpeg_kit_flutter_video/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_video/return_code.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
 /// FFmpeg 视频渲染服务
 /// 负责将时间线配置转换为真实的 FFmpeg 命令并执行渲染
+
+/// 渲染进度回调
+typedef RenderProgressCallback = void Function(double progress);
+
+/// 渲染完成回调
+typedef RenderCompleteCallback = void Function(String? outputPath, String? error);
+
 class FFmpegRenderService {
   static final FFmpegRenderService _instance = FFmpegRenderService._internal();
   factory FFmpegRenderService() => _instance;
   FFmpegRenderService._internal();
-
-  /// 渲染进度回调
-  typedef RenderProgressCallback = void Function(double progress);
-  
-  /// 渲染完成回调
-  typedef RenderCompleteCallback = void Function(String? outputPath, String? error);
 
   /// 执行视频渲染
   /// 
@@ -49,22 +51,22 @@ class FFmpegRenderService {
         aspectRatio: aspectRatio,
       );
 
-      print('执行 FFmpeg 命令：$ffmpegCommand');
+      debugPrint('执行 FFmpeg 命令：$ffmpegCommand');
 
       // 执行 FFmpeg
       final session = await FFmpegKit.execute(ffmpegCommand);
       final returnCode = await session.getReturnCode();
 
       if (ReturnCode.isSuccess(returnCode)) {
-        print('渲染成功：$outputPath');
+        debugPrint('渲染成功：$outputPath');
         return outputPath;
       } else {
         final failStackTrace = await session.getFailStackTrace();
-        print('渲染失败：$failStackTrace');
+        debugPrint('渲染失败：$failStackTrace');
         return null;
       }
     } catch (e) {
-      print('渲染异常：$e');
+      debugPrint('渲染异常：$e');
       return null;
     }
   }
@@ -235,13 +237,12 @@ class FFmpegRenderService {
       final returnCode = await session.getReturnCode();
       
       if (ReturnCode.isSuccess(returnCode)) {
-        final output = await session.getOutput();
         // 这里需要 JSON 解析，简化处理返回 null
         return {'path': filePath};
       }
       return null;
     } catch (e) {
-      print('获取媒体信息失败：$e');
+      debugPrint('获取媒体信息失败：$e');
       return null;
     }
   }

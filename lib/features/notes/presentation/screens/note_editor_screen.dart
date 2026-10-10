@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
@@ -27,9 +28,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   final FocusNode _focusNode = FocusNode();
   bool _isSaving = false;
   bool _isSyncing = false;
-  String _title = '';
   final _titleController = TextEditingController();
-  bool _hasUnsyncedChanges = false;
+  bool _isDirty = false;
+  StreamSubscription<quill.DocChange>? _docChangeSub;
 
   @override
   void initState() {
@@ -59,11 +60,23 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           _navigateToMindMapEditor();
         }
       }
+
+      // 初始内容装载完成后再监听文档变化，避免载入即被标记为未保存
+      _docChangeSub = _controller.document.changes.listen((_) {
+        _markDirty();
+      });
     });
+  }
+
+  void _markDirty() {
+    if (!_isDirty) {
+      setState(() => _isDirty = true);
+    }
   }
 
   @override
   void dispose() {
+    _docChangeSub?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     _titleController.dispose();
@@ -72,7 +85,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: !_isDirty,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _confirmExit();
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: TextField(
           controller: _titleController,
@@ -82,7 +101,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             border: InputBorder.none,
             hintStyle: TextStyle(color: Colors.white70),
           ),
-          onChanged: (value) => _title = value,
+          onChanged: (value) => _markDirty(),
         ),
         actions: [
           // 云同步按钮
@@ -158,7 +177,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             if (widget.noteId != null && note != null) {
               return MindMapEditorScreen(noteId: widget.noteId!);
             } else {
-              return MindMapEditorScreen(createNew: true);
+              return const MindMapEditorScreen(createNew: true);
             }
           }
 
@@ -182,6 +201,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           );
         },
       ),
+      ),
     );
   }
 
@@ -191,7 +211,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -230,10 +250,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             content: content,
             updatedAt: DateTime.now(),
           ));
-          // 标记为有未同步的更改
-          setState(() {
-            _hasUnsyncedChanges = true;
-          });
         }
       } else {
         await viewModel.createNote(
@@ -247,7 +263,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('笔记已保存'), duration: Duration(seconds: 1)),
         );
-        setState(() => _isSaving = false);
+        setState(() {
+          _isSaving = false;
+          _isDirty = false;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -280,9 +299,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       
       if (mounted) {
         if (success) {
-          setState(() {
-            _hasUnsyncedChanges = false;
-          });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('同步成功'),
@@ -360,7 +376,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final newType = note.type == NoteType.mindMap ? NoteType.richText : NoteType.mindMap;
     final label = newType == NoteType.mindMap ? '思维导图' : '富文本';
 
-    final converted = await viewModel.updateNote(note.copyWith(
+    await viewModel.updateNote(note.copyWith(
       type: newType,
       updatedAt: DateTime.now(),
     ));
@@ -444,5 +460,40 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         ],
       ),
     );
+  }
+
+  /// 有未保存更改时，通过 PopScope 阻止直接退出并询问用户
+  Future<void> _confirmExit() async {
+    final action = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('未保存的更改'),
+        content: const Text('你有未保存的修改，退出将丢失。要如何处理？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'discard'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('不保存'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'save'),
+            child: const Text('保存并退出'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (action == 'discard') {
+      Navigator.of(context).pop();
+    } else if (action == 'save') {
+      await _saveNote();
+      if (mounted && !_isDirty) {
+        Navigator.of(context).pop();
+      }
+    }
   }
 }

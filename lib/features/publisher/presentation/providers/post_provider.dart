@@ -19,7 +19,6 @@ class PostProvider extends ChangeNotifier {
   final GetPostByIdUseCase _getPostById;
   final SavePostUseCase _savePost;
   final DeletePostUseCase _deletePost;
-  final GetDraftsUseCase _getDrafts;
 
   List<PostDocumentModel> _posts = [];
   PostDocumentModel? _currentPost;
@@ -31,12 +30,10 @@ class PostProvider extends ChangeNotifier {
     required GetPostByIdUseCase getPostById,
     required SavePostUseCase savePost,
     required DeletePostUseCase deletePost,
-    required GetDraftsUseCase getDrafts,
   })  : _getAllPosts = getAllPosts,
         _getPostById = getPostById,
         _savePost = savePost,
-        _deletePost = deletePost,
-        _getDrafts = getDrafts;
+        _deletePost = deletePost;
 
   // Getters
   List<PostDocumentModel> get posts => _posts;

@@ -14,7 +14,7 @@ class UserLocalDataSource {
 
   /// 获取当前用户
   Future<User?> getCurrentUser() async {
-    final userJson = await _storageManager.getString(_userKey);
+    final userJson = _storageManager.getString(_userKey);
     if (userJson == null) return null;
     
     try {
@@ -45,7 +45,7 @@ class UserLocalDataSource {
 
   /// 检查是否已登录（包括游客）
   Future<bool> isLoggedIn() async {
-    return await _storageManager.getBool(_isLoggedInKey) ?? false;
+    return _storageManager.getBool(_isLoggedInKey) ?? false;
   }
 
   /// 清除用户数据（退出登录）

@@ -1,4 +1,4 @@
-/// 笔记模块 - 数据模型
+// 笔记模块 - 数据模型
 
 /// 笔记类型枚举
 enum NoteType {
@@ -107,13 +107,14 @@ class MindMapData {
   
   /// 从 JSON Map 创建
   factory MindMapData.fromJson(Map<String, dynamic> json) {
-    final rootJson = json['root'] as Map<String, dynamic>;
-    final root = MindMapNode.fromJson(rootJson);
-    final nodesJson = json['nodes'] as Map<String, dynamic>? ?? {};
+    final root = MindMapNode.fromJson(Map<String, dynamic>.from(json['root'] as Map));
     final nodes = <String, MindMapNode>{};
-    nodesJson.forEach((key, value) {
-      nodes[key] = MindMapNode.fromJson(value as Map<String, dynamic>);
-    });
+    if (json['nodes'] is Map) {
+      final nodesJson = Map<String, dynamic>.from(json['nodes'] as Map);
+      nodesJson.forEach((key, value) {
+        nodes[key] = MindMapNode.fromJson(Map<String, dynamic>.from(value as Map));
+      });
+    }
     return MindMapData(
       root: root,
       nodes: nodes,
@@ -185,8 +186,8 @@ class MindMapNode {
       text: json['text'] as String,
       childIds: List<String>.from(json['childIds'] ?? []),
       parentId: json['parentId'] as String?,
-      style: json['style'] != null 
-          ? NodeStyle.fromJson(json['style'] as Map<String, dynamic>)
+      style: json['style'] is Map
+          ? NodeStyle.fromJson(Map<String, dynamic>.from(json['style'] as Map))
           : const NodeStyle(),
       x: json['x'] as double?,
       y: json['y'] as double?,

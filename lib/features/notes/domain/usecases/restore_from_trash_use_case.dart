@@ -1,4 +1,4 @@
-/// 从回收站恢复用例
+// 从回收站恢复用例
 
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failure.dart';

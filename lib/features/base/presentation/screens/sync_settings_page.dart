@@ -1,6 +1,6 @@
-/// WebDAV 同步设置页面
-/// 
-/// 提供 WebDAV 服务器配置、测试连接和同步管理功能
+// WebDAV 同步设置页面
+// 
+// 提供 WebDAV 服务器配置、测试连接和同步管理功能
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +11,7 @@ import '../providers/sync_provider.dart';
 
 /// WebDAV 同步设置页面
 class SyncSettingsPage extends StatefulWidget {
-  const SyncSettingsPage({Key? key}) : super(key: key);
+  const SyncSettingsPage({super.key});
 
   @override
   State<SyncSettingsPage> createState() => _SyncSettingsPageState();
@@ -39,10 +39,10 @@ class _SyncSettingsPageState extends State<SyncSettingsPage> {
     final client = di.sl<WebDavClient>();
     if (client.isConfigured && client.config != null) {
       final config = client.config!;
-      _serverController.text = config.baseUrl;
+      _serverController.text = config.serverUrl;
       _usernameController.text = config.username;
       // 密码出于安全考虑不自动填充，但可以提示已保存
-      _notesDirController.text = config.notesDirectory;
+      // 笔记目录固定为 /litework/notes，与 WebDavClient 保持一致
     }
   }
   
@@ -57,10 +57,9 @@ class _SyncSettingsPageState extends State<SyncSettingsPage> {
     
     try {
       final config = WebDavConfig(
-        baseUrl: _serverController.text.trim(),
+        serverUrl: _serverController.text.trim(),
         username: _usernameController.text.trim(),
         password: _passwordController.text,
-        notesDirectory: _notesDirController.text.trim(),
       );
       
       final client = di.sl<WebDavClient>();
@@ -87,10 +86,9 @@ class _SyncSettingsPageState extends State<SyncSettingsPage> {
     
     try {
       final config = WebDavConfig(
-        baseUrl: _serverController.text.trim(),
+        serverUrl: _serverController.text.trim(),
         username: _usernameController.text.trim(),
         password: _passwordController.text,
-        notesDirectory: _notesDirController.text.trim(),
       );
       
       final client = di.sl<WebDavClient>();
@@ -145,7 +143,8 @@ class _SyncSettingsPageState extends State<SyncSettingsPage> {
       try {
         final client = di.sl<WebDavClient>();
         await client.clearConfig();
-        
+        if (!mounted) return;
+
         context.read<SyncProvider>().checkSyncStatus();
         
         ScaffoldMessenger.of(context).showSnackBar(
@@ -157,6 +156,7 @@ class _SyncSettingsPageState extends State<SyncSettingsPage> {
         
         Navigator.of(context).pop(true);
       } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('清除失败：${e.toString()}'),
@@ -181,7 +181,6 @@ class _SyncSettingsPageState extends State<SyncSettingsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('云同步设置'),
-        subtitle: const Text('WebDAV'),
       ),
       body: Form(
         key: _formKey,
@@ -326,8 +325,8 @@ class _SyncSettingsPageState extends State<SyncSettingsPage> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: _testSuccess 
-                      ? Colors.green.withOpacity(0.1) 
-                      : Colors.red.withOpacity(0.1),
+                      ? Colors.green.withValues(alpha: 0.1) 
+                      : Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -364,7 +363,7 @@ class _SyncSettingsPageState extends State<SyncSettingsPage> {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.wifi_test_outlined),
+                        : const Icon(Icons.wifi_outlined),
                     label: Text(_isTesting ? '测试中...' : '测试连接'),
                   ),
                 ),

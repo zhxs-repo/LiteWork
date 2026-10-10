@@ -6,8 +6,6 @@ class PostLocalDataSource {
   static const String _boxName = 'posts_box';
   late Box<Map> _postsBox;
 
-  static const String _postsKey = 'posts';
-
   PostLocalDataSource();
 
   /// 初始化数据源

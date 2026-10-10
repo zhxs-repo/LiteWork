@@ -17,7 +17,6 @@ class MediaPickerPanel extends StatefulWidget {
 class _MediaPickerPanelState extends State<MediaPickerPanel> {
   final ImagePicker _picker = ImagePicker();
   final List<XFile> _selectedMedia = [];
-  int? _selectedMediaIndex;
 
   Future<void> _importMedia() async {
     final List<XFile> media = await _picker.pickMultipleMedia();
@@ -105,9 +104,6 @@ class _MediaPickerPanelState extends State<MediaPickerPanel> {
     await provider.addClipToTimeline(clip);
     
     if (mounted) {
-      setState(() {
-        _selectedMediaIndex = index;
-      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('已添加 "${xfile.name}" 到时间线')),
       );

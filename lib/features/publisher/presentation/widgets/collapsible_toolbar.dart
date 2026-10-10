@@ -45,17 +45,17 @@ class _CollapsibleToolbarState extends State<CollapsibleToolbar> {
                 _quickBtn(
                   Icons.format_bold,
                   '加粗',
-                  () => _toggleAttribute(quill.AttributeKey.bold),
+                  () => _toggleAttribute(quill.Attribute.bold),
                 ),
                 _quickBtn(
                   Icons.format_italic,
                   '斜体',
-                  () => _toggleAttribute(quill.AttributeKey.italic),
+                  () => _toggleAttribute(quill.Attribute.italic),
                 ),
                 _quickBtn(
                   Icons.format_underline,
                   '下划线',
-                  () => _toggleAttribute(quill.AttributeKey.underline),
+                  () => _toggleAttribute(quill.Attribute.underline),
                 ),
                 _quickBtn(
                   Icons.image,
@@ -111,9 +111,14 @@ class _CollapsibleToolbarState extends State<CollapsibleToolbar> {
     );
   }
 
-  void _toggleAttribute(quill.AttributeKey key) {
-    final isApplied = widget.controller.selectionStyle?.attributes.containsKey(key) ?? false;
-    widget.controller.formatSelection(quill.Attribute(key, !isApplied));
+  void _toggleAttribute(quill.Attribute attribute) {
+    final isApplied = widget.controller
+        .getSelectionStyle()
+        .attributes
+        .containsKey(attribute.key);
+    widget.controller.formatSelection(
+      isApplied ? quill.Attribute.clone(attribute, null) : attribute,
+    );
   }
 
   void _insertLink() {
@@ -145,7 +150,7 @@ class _CollapsibleToolbarState extends State<CollapsibleToolbar> {
       ),
     ).then((url) {
       if (url != null && url.isNotEmpty) {
-        widget.controller.formatSelection(quill.Attribute.link(url));
+        widget.controller.formatSelection(quill.LinkAttribute(url));
       }
     });
   }
