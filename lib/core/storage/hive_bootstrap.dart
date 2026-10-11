@@ -18,8 +18,9 @@ import '../utils/common_utils.dart';
 /// - Android: `/data/user/0/<package>/files/hive`
 /// - iOS:     `Library/Application Support/hive`
 ///
-/// 用户文档目录仍由 `media_utils.dart`、`mind_map_editor_screen.dart`
-/// 使用（`media_imports` / `Default Project`），不受本文件影响。
+/// 素材托管副本（`media_utils.dart` 的 `media_imports`）同样住在应用私有目录，
+/// 本文件与它共用 Application Support。用户文档目录只保留用户可见的导出产物
+/// （如 `mind_map_editor_screen.dart` 写出的 PNG）。
 ///
 /// 必须在任何 `Hive.openBox` 之前调用。
 Future<String?> initHive() async {

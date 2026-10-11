@@ -67,6 +67,16 @@ class VideoLocalDataSource {
     return _mapToMedia(data);
   }
 
+  /// 按 id 集合批量读取素材（项目加载时只取自己用到的素材）
+  Future<List<MediaItem>> getMediaByIds(Iterable<String> ids) async {
+    final result = <MediaItem>[];
+    for (final id in ids.toSet()) {
+      final data = _mediaBox.get(id);
+      if (data != null) result.add(_mapToMedia(data));
+    }
+    return result;
+  }
+
   Future<void> saveMedia(MediaItem media) async {
     await _mediaBox.put(media.id, _mediaToMap(media));
   }
@@ -90,6 +100,18 @@ class VideoLocalDataSource {
         .where((data) => _mapToClip(data).projectId == projectId)
         .map((data) => _mapToClip(data))
         .toList();
+  }
+
+  /// 跨项目的所有片段，用于判断素材是否仍被引用
+  Future<List<TimelineClip>> getAllClips() async {
+    return _clipsBox.values.map(_mapToClip).toList();
+  }
+
+  Future<void> deleteClipsForProject(String projectId) async {
+    final keys = _clipsBox.keys
+        .where((key) => (_clipsBox.get(key)?['projectId'] as String?) == projectId)
+        .toList();
+    await _clipsBox.deleteAll(keys);
   }
 
   Future<void> saveClip(TimelineClip clip) async {
@@ -145,6 +167,8 @@ class VideoLocalDataSource {
       'width': media.width,
       'height': media.height,
       'createdAt': media.createdAt.toIso8601String(),
+      'name': media.name,
+      'modifiedMs': media.modifiedMs,
     };
   }
 
@@ -158,6 +182,12 @@ class VideoLocalDataSource {
       thumbnailPath: data['thumbnailPath'] as String?,
       width: data['width'] as int?,
       height: data['height'] as int?,
+      name: data['name'] as String?,
+      modifiedMs: (data['modifiedMs'] as int?) ??
+          (data['createdAt'] != null
+              ? DateTime.parse(data['createdAt'] as String)
+                  .millisecondsSinceEpoch
+              : null),
       createdAt: DateTime.parse(data['createdAt'] as String),
     );
   }

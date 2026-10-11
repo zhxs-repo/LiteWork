@@ -38,6 +38,14 @@ class MediaItem extends HiveObject {
   @HiveField(8)
   int? height;
 
+  /// 展示用文件名（导入时的原始文件名，不含目录）
+  @HiveField(9)
+  String? name;
+
+  /// 源文件修改时间（毫秒），与 sizeBytes 一起作为文件指纹用于去重与脱机判定
+  @HiveField(10)
+  int? modifiedMs;
+
   MediaItem({
     required this.id,
     required this.path,
@@ -48,6 +56,8 @@ class MediaItem extends HiveObject {
     this.thumbnailPath,
     this.width,
     this.height,
+    this.name,
+    this.modifiedMs,
   });
 
   factory MediaItem.fromMap(Map<String, dynamic> map) {
@@ -61,6 +71,8 @@ class MediaItem extends HiveObject {
       thumbnailPath: map['thumbnailPath'] as String?,
       width: map['width'] as int?,
       height: map['height'] as int?,
+      name: map['name'] as String?,
+      modifiedMs: map['modifiedMs'] as int?,
     );
   }
 
@@ -75,6 +87,8 @@ class MediaItem extends HiveObject {
       'thumbnailPath': thumbnailPath,
       'width': width,
       'height': height,
+      'name': name,
+      'modifiedMs': modifiedMs,
     };
   }
 }

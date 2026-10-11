@@ -16,54 +16,103 @@ class MediaPickerPanel extends StatefulWidget {
 
 class _MediaPickerPanelState extends State<MediaPickerPanel> {
   final ImagePicker _picker = ImagePicker();
-  final List<XFile> _selectedMedia = [];
+  bool _isImporting = false;
 
   Future<void> _importMedia() async {
     final List<XFile> media = await _picker.pickMultipleMedia();
-    if (media.isNotEmpty) {
-      setState(() {
-        _selectedMedia.addAll(media);
-      });
+    if (media.isEmpty || !mounted) return;
 
-      final mediaItems = <MediaItem>[];
-      
-      for (final xfile in media) {
-        // 先复制到持久化目录
-        final persistentPath = await MediaUtils.copyToAppDirectory(xfile.path);
-        
-        final isVideo = MediaUtils.isVideoFile(persistentPath);
-        int durationMs = 0;
-        
-        // 异步获取视频时长
-        if (isVideo) {
-          durationMs = await MediaUtils.getVideoDuration(persistentPath);
-        } else {
-          // 图片默认时长为 3 秒
-          durationMs = 3000;
-        }
+    setState(() => _isImporting = true);
+    final mediaItems = <MediaItem>[];
+    for (final xfile in media) {
+      // 桌面端直接引用原文件，只有临时文件才落地到托管目录
+      final storedPath = await MediaUtils.materializeForImport(xfile.path);
+      final isVideo = MediaUtils.isVideoFile(storedPath);
+      final stat = await File(storedPath).stat();
 
-        mediaItems.add(MediaItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString() + xfile.name,
-          path: persistentPath,
-          type: isVideo ? MediaType.video : MediaType.image,
-          durationMs: durationMs,
-          createdAt: DateTime.now(),
-        ));
-      }
+      // 图片默认时长 3 秒，视频用 media_kit 探测
+      final durationMs = isVideo ? await MediaUtils.getVideoDuration(storedPath) : 3000;
 
-      if (mounted) {
-        context.read<VideoProvider>().importMedia(mediaItems);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已导入 ${media.length} 个素材')),
-        );
-      }
+      mediaItems.add(MediaItem(
+        id: DateTime.now().millisecondsSinceEpoch.toString() + xfile.name,
+        path: storedPath,
+        type: isVideo ? MediaType.video : MediaType.image,
+        durationMs: durationMs,
+        sizeBytes: stat.size,
+        modifiedMs: stat.modified.millisecondsSinceEpoch,
+        name: xfile.name,
+        createdAt: DateTime.now(),
+      ));
     }
+
+    if (!mounted) return;
+    setState(() => _isImporting = false);
+
+    final provider = context.read<VideoProvider>();
+    final before = provider.availableMedia.length;
+    await provider.importMedia(mediaItems);
+    final added = provider.availableMedia.length - before;
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('已导入 $added 个素材，跳过 ${mediaItems.length - added} 个重复项'),
+      ),
+    );
   }
 
-  Future<void> _addMediaToTimeline(XFile xfile, MediaItem mediaItem, int index) async {
+  Future<void> _relocateMedia(MediaItem media) async {
+    final picked = await _picker.pickMedia();
+    if (!mounted) return;
+    if (picked == null) return;
+
+    final provider = context.read<VideoProvider>();
+    final storedPath = await MediaUtils.materializeForImport(picked.path);
+    await provider.relocateMedia(media.id, storedPath);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已重新定位「${media.name ?? media.id}」')),
+    );
+  }
+
+  Future<void> _cleanupStorage() async {
+    final provider = context.read<VideoProvider>();
+    final usage = await provider.managedStorageUsage();
+    if (!mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('清理素材存储'),
+        content: Text(
+          '托管目录当前占用 ${_formatBytes(usage.bytes)}（${usage.files} 个文件）。\n'
+          '将删除不再被任何片段引用的副本，磁盘上的原文件不受影响。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('清理'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final freed = await provider.cleanupUnusedMedia();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已释放 ${_formatBytes(freed.bytes)}（${freed.files} 个文件）')),
+    );
+  }
+
+  Future<void> _addMediaToTimeline(MediaItem mediaItem) async {
     final provider = context.read<VideoProvider>();
     final currentProject = provider.currentProject;
-    
+
     if (currentProject == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请先创建或打开一个项目')),
@@ -71,20 +120,24 @@ class _MediaPickerPanelState extends State<MediaPickerPanel> {
       return;
     }
 
+    if (provider.isMediaOffline(mediaItem)) {
+      await _relocateMedia(mediaItem);
+      return;
+    }
+
     // 计算添加到时间线的位置（追加到末尾）
     final existingClips = provider.clips;
     int startPositionMs = 0;
-    
+
     if (existingClips.isNotEmpty) {
       startPositionMs = existingClips.fold<int>(
         0,
-        (max, clip) => (clip.positionMs + clip.durationMs) > max 
-            ? (clip.positionMs + clip.durationMs) 
+        (max, clip) => (clip.positionMs + clip.durationMs) > max
+            ? (clip.positionMs + clip.durationMs)
             : max,
       );
     }
 
-    // 创建时间线片段
     final clip = TimelineClip(
       id: '${currentProject.id}_clip_${DateTime.now().millisecondsSinceEpoch}',
       projectId: currentProject.id,
@@ -100,19 +153,20 @@ class _MediaPickerPanelState extends State<MediaPickerPanel> {
       isReversed: false,
     );
 
-    // 添加到时间线
     await provider.addClipToTimeline(clip);
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已添加 "${xfile.name}" 到时间线')),
-      );
-    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已添加 "${mediaItem.name ?? mediaItem.id}" 到时间线')),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final provider = context.watch<VideoProvider>();
+    final media = provider.availableMedia;
+
     return Container(
       height: 120,
       color: cs.surfaceContainerHighest,
@@ -130,15 +184,27 @@ class _MediaPickerPanelState extends State<MediaPickerPanel> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                TextButton(
-                  onPressed: _importMedia,
-                  child: Text('+ 导入', style: TextStyle(color: cs.primary)),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton(
+                      onPressed: _cleanupStorage,
+                      child: Text('清理', style: TextStyle(color: cs.primary)),
+                    ),
+                    TextButton(
+                      onPressed: _isImporting ? null : _importMedia,
+                      child: Text(
+                        _isImporting ? '导入中…' : '+ 导入',
+                        style: TextStyle(color: cs.primary),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
           Expanded(
-            child: _selectedMedia.isEmpty
+            child: media.isEmpty
                 ? Center(
                     child: Text(
                       '点击"+ 导入"添加素材',
@@ -147,28 +213,13 @@ class _MediaPickerPanelState extends State<MediaPickerPanel> {
                   )
                 : ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: _selectedMedia.length,
+                    itemCount: media.length,
                     itemBuilder: (context, index) {
-                      final xfile = _selectedMedia[index];
-                      final isVideo = MediaUtils.isVideoFile(xfile.path);
-                      
-                      // 查找对应的 MediaItem
-                      final provider = context.watch<VideoProvider>();
-                      final mediaItem = provider.availableMedia.lastWhere(
-                        (m) => m.path == xfile.path,
-                        orElse: () => MediaItem(
-                          id: '',
-                          path: xfile.path,
-                          type: isVideo ? MediaType.video : MediaType.image,
-                          durationMs: 0,
-                          createdAt: DateTime.now(),
-                        ),
-                      );
-                      
-                      return _MediaFileTile(
-                        xfile: xfile,
-                        mediaItem: mediaItem,
-                        onTap: () => _addMediaToTimeline(xfile, mediaItem, index),
+                      final item = media[index];
+                      return _MediaTile(
+                        mediaItem: item,
+                        isOffline: provider.isMediaOffline(item),
+                        onTap: () => _addMediaToTimeline(item),
                       );
                     },
                   ),
@@ -179,21 +230,21 @@ class _MediaPickerPanelState extends State<MediaPickerPanel> {
   }
 }
 
-class _MediaFileTile extends StatelessWidget {
-  final XFile xfile;
+class _MediaTile extends StatelessWidget {
   final MediaItem mediaItem;
+  final bool isOffline;
   final VoidCallback onTap;
-  
-  const _MediaFileTile({
-    required this.xfile,
+
+  const _MediaTile({
     required this.mediaItem,
+    required this.isOffline,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isVideo = MediaUtils.isVideoFile(xfile.path);
+    final isVideo = mediaItem.type == MediaType.video;
 
     return GestureDetector(
       onTap: onTap,
@@ -208,22 +259,34 @@ class _MediaFileTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           child: Stack(
             children: [
-              Image.file(
-                File(xfile.path),
-                width: 100,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+              if (isVideo || isOffline)
+                Container(
                   color: cs.primaryContainer,
                   child: Center(
                     child: Icon(
-                      isVideo ? Icons.video_library : Icons.image,
+                      isOffline ? Icons.link_off : Icons.video_library,
                       size: 40,
                       color: cs.onPrimaryContainer,
                     ),
                   ),
+                )
+              else
+                Image.file(
+                  File(mediaItem.path),
+                  width: 100,
+                  height: 80,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: cs.primaryContainer,
+                    child: Center(
+                      child: Icon(
+                        Icons.image,
+                        size: 40,
+                        color: cs.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
               Positioned(
                 right: 4,
                 bottom: 4,
@@ -247,18 +310,19 @@ class _MediaFileTile extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
-                left: 0,
-                top: 0,
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: cs.primary.withValues(alpha: 0.5), width: 2),
-                    borderRadius: BorderRadius.circular(8),
+              if (isOffline)
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    color: Colors.red.shade700,
+                    child: const Text(
+                      '脱机·点击定位',
+                      style: TextStyle(color: Colors.white, fontSize: 9),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -275,4 +339,14 @@ class _MediaFileTile extends StatelessWidget {
     }
     return '0:$remainingSeconds';
   }
+}
+
+String _formatBytes(int bytes) {
+  if (bytes >= 1024 * 1024 * 1024) {
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+  }
+  if (bytes >= 1024 * 1024) {
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+  return '${(bytes / 1024).toStringAsFixed(0)} KB';
 }

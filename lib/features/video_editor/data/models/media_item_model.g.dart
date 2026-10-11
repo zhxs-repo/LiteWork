@@ -26,13 +26,15 @@ class MediaItemAdapter extends TypeAdapter<MediaItem> {
       thumbnailPath: fields[6] as String?,
       width: fields[7] as int?,
       height: fields[8] as int?,
+      name: fields[9] as String?,
+      modifiedMs: fields[10] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, MediaItem obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +52,11 @@ class MediaItemAdapter extends TypeAdapter<MediaItem> {
       ..writeByte(7)
       ..write(obj.width)
       ..writeByte(8)
-      ..write(obj.height);
+      ..write(obj.height)
+      ..writeByte(9)
+      ..write(obj.name)
+      ..writeByte(10)
+      ..write(obj.modifiedMs);
   }
 
   @override

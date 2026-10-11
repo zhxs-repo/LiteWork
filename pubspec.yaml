@@ -36,8 +36,6 @@ dependencies:
   path: ^1.9.1
 
   # 视频与媒体处理
-  video_player: ^2.9.2
-  chewie: ^1.7.0
   image_picker: ^1.0.0
   # 视频处理 - 使用轻量级版本，功能不足时再升级至 full_gpl
   ffmpeg_kit_flutter_video: ^6.0.3
@@ -65,6 +63,9 @@ dependencies:
   
   # 骨架屏效果
   shimmer: ^3.0.0
+  media_kit: ^1.2.6
+  media_kit_video: ^2.0.1
+  media_kit_libs_video: ^1.0.7
 
 dev_dependencies:
   flutter_test:

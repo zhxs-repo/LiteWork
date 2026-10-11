@@ -1,7 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
-import 'dart:io';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
 class PreviewPlayer extends StatefulWidget {
   final String? videoPath;
@@ -20,118 +21,98 @@ class PreviewPlayer extends StatefulWidget {
 }
 
 class _PreviewPlayerState extends State<PreviewPlayer> {
-  VideoPlayerController? _videoController;
-  ChewieController? _chewieController;
-  bool _isInitialized = false;
-  Duration _currentPosition = Duration.zero;
+  Player? _player;
+  VideoController? _controller;
+  StreamSubscription<Duration>? _positionSubscription;
+  Duration _lastReported = Duration.zero;
+  bool _isReady = false;
 
   @override
   void initState() {
     super.initState();
     if (widget.videoPath != null) {
-      _initializePlayer(widget.videoPath!);
+      _open(widget.videoPath!);
     }
   }
 
   @override
   void didUpdateWidget(PreviewPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.videoPath != null && widget.videoPath != oldWidget.videoPath) {
-      _disposeControllers();
-      _initializePlayer(widget.videoPath!);
-    }
-    // 处理播放头跳转
-    if (widget.currentPosition != null && 
-        widget.currentPosition != oldWidget.currentPosition && 
-        _isInitialized) {
-      _seekTo(widget.currentPosition!);
-    }
-  }
-
-  Future<void> _initializePlayer(String path) async {
-    try {
-      _videoController = VideoPlayerController.file(File(path));
-      await _videoController!.initialize();
-      
-      _chewieController = ChewieController(
-        videoPlayerController: _videoController!,
-        autoPlay: false,
-        looping: true,
-        showControls: true,
-        aspectRatio: _videoController!.value.aspectRatio,
-        allowFullScreen: false,
-        allowMuting: true,
-        placeholder: Container(color: Colors.black),
-      );
-
-      _videoController!.addListener(() {
-        if (widget.onPositionChanged != null && _videoController!.value.isInitialized) {
-          final newPosition = _videoController!.value.position;
-          // 防抖处理，避免频繁更新
-          if ((newPosition - _currentPosition).inMilliseconds.abs() > 50) {
-            _currentPosition = newPosition;
-            widget.onPositionChanged!(newPosition);
-          }
-        }
-      });
-
-      setState(() {
-        _isInitialized = true;
-      });
-    } catch (e) {
-      debugPrint('初始化视频播放器失败：$e');
-      setState(() {
-        _isInitialized = false;
-      });
-    }
-  }
-
-  void _disposeControllers() {
-    _chewieController?.dispose();
-    _videoController?.dispose();
-    _chewieController = null;
-    _videoController = null;
-    _isInitialized = false;
-  }
-
-  void _seekTo(Duration position) {
-    if (_videoController != null && _videoController!.value.isInitialized) {
-      _videoController!.seekTo(position);
-    }
-  }
-
-  void _togglePlay() {
-    if (_chewieController != null) {
-      if (_videoController!.value.isPlaying) {
-        _videoController!.pause();
+    if (widget.videoPath != oldWidget.videoPath) {
+      if (widget.videoPath == null) {
+        _releasePlayer();
       } else {
-        _videoController!.play();
+        _open(widget.videoPath!);
       }
     }
+    // 处理播放头跳转
+    if (widget.currentPosition != null &&
+        widget.currentPosition != oldWidget.currentPosition &&
+        _isReady) {
+      _player?.seek(widget.currentPosition!);
+    }
+  }
+
+  Future<void> _open(String path) async {
+    await _releasePlayer();
+    final player = Player();
+    final controller = VideoController(player);
+    _player = player;
+    _controller = controller;
+
+    _positionSubscription = player.stream.position.listen((position) {
+      // 防抖处理，避免频繁更新
+      if ((position - _lastReported).inMilliseconds.abs() > 50) {
+        _lastReported = position;
+        widget.onPositionChanged?.call(position);
+      }
+    });
+    await player.setPlaylistMode(PlaylistMode.loop);
+
+    try {
+      await player.open(Media(path));
+      if (!mounted) return;
+      setState(() => _isReady = true);
+    } catch (e) {
+      debugPrint('初始化视频播放器失败：$e');
+      if (!mounted) return;
+      setState(() => _isReady = false);
+    }
+  }
+
+  Future<void> _releasePlayer() async {
+    await _positionSubscription?.cancel();
+    _positionSubscription = null;
+    await _player?.dispose();
+    _player = null;
+    _controller = null;
+    _lastReported = Duration.zero;
+    if (mounted) setState(() => _isReady = false);
   }
 
   @override
   void dispose() {
-    _disposeControllers();
+    _positionSubscription?.cancel();
+    _player?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final controller = _controller;
     return Container(
-      color: cs.surface,
+      color: Colors.black,
       child: GestureDetector(
-        onTap: _togglePlay,
-        child: _isInitialized && _chewieController != null
-            ? Chewie(controller: _chewieController!)
-            : _buildPlaceholder(),
+        onTap: () => _player?.playOrPause(),
+        child: _isReady && controller != null
+            ? Video(controller: controller)
+            : _buildPlaceholder(cs),
       ),
     );
   }
 
-  Widget _buildPlaceholder() {
-    final cs = Theme.of(context).colorScheme;
+  Widget _buildPlaceholder(ColorScheme cs) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

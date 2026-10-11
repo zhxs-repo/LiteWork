@@ -26,10 +26,13 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   Future<void> _calculateStorage() async {
     try {
       final cacheDir = await getTemporaryDirectory();
-      final appDir = await getApplicationDocumentsDirectory();
-      
+      // 应用私有数据已迁到 Application Support（Hive、素材托管副本），文档目录只剩用户可见导出
+      final supportDir = await getApplicationSupportDirectory();
+      final docsDir = await getApplicationDocumentsDirectory();
+
       int cacheSize = await _getDirectorySize(cacheDir);
-      int appSize = await _getDirectorySize(appDir);
+      int appSize = await _getDirectorySize(supportDir) +
+          await _getDirectorySize(docsDir);
 
       setState(() {
         _totalCacheSize = cacheSize;

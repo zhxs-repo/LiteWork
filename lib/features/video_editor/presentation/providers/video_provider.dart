@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
+import '../../../../core/utils/common_utils.dart';
 import '../../data/datasources/video_local_datasource.dart';
 import '../../data/models/video_project_model.dart' as data;
 import '../../data/models/media_item_model.dart';
@@ -7,6 +10,7 @@ import '../../data/models/timeline_clip_model.dart';
 import '../../data/models/timeline_data_model.dart';
 import '../../domain/models.dart' as domain;
 import '../../services/ffmpeg_render_service.dart';
+import '../../utils/media_utils.dart';
 
 /// 统一视频 Provider - 合并项目列表 CRUD、编辑器详情、导出配置
 class VideoProvider extends ChangeNotifier {
@@ -129,6 +133,8 @@ class VideoProvider extends ChangeNotifier {
       notifyListeners();
 
       await _dataSource.deleteProject(id);
+      await _dataSource.deleteClipsForProject(id);
+      await cleanupUnusedMedia();
       _projects.removeWhere((p) => p.id == id);
       if (_currentProject?.id == id) {
         _currentProject = null;
@@ -236,6 +242,13 @@ class VideoProvider extends ChangeNotifier {
         final clipsData = await _dataSource.getClipsForProject(projectId);
         _clips = clipsData;
 
+        // 时间线只引用 mediaId，素材元数据需从 media box 补齐，否则重启后名称与预览路径全丢
+        _availableMedia
+          ..clear()
+          ..addAll(
+            await _dataSource.getMediaByIds(_clips.map((c) => c.mediaId)),
+          );
+
         final domainClips = _clips.map((tc) {
           final media = _availableMedia.firstWhere(
             (m) => m.id == tc.mediaId,
@@ -296,13 +309,110 @@ class VideoProvider extends ChangeNotifier {
 
   Future<void> importMedia(List<MediaItem> mediaList) async {
     try {
-      await _dataSource.saveMediaBatch(mediaList);
-      _availableMedia.addAll(mediaList);
+      // 桌面端直引原文件，同一路径重复导入只保留一条记录
+      final fresh = mediaList
+          .where((m) => _availableMedia.every((e) => MediaUtils.canonicalPath(e.path) == MediaUtils.canonicalPath(m.path)))
+          .toList();
+      if (fresh.isEmpty) return;
+
+      await _dataSource.saveMediaBatch(fresh);
+      _availableMedia.addAll(fresh);
       notifyListeners();
     } catch (e) {
       _error = e.toString();
       notifyListeners();
     }
+  }
+
+  /// 素材文件是否已丢失（被移动、改名或删除）
+  bool isMediaOffline(MediaItem media) => !File(media.path).existsSync();
+
+  /// 删除素材记录；托管副本在没有其它记录引用时才删文件，绝不删除用户原文件
+  Future<void> deleteMedia(String id) async {
+    try {
+      final index = _availableMedia.indexWhere((m) => m.id == id);
+      if (index == -1) return;
+
+      await _dataSource.deleteMedia(id);
+      _availableMedia.removeAt(index);
+      await _removeUnreferencedManagedFiles();
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  /// 重新定位丢失的素材，并刷新指纹
+  Future<void> relocateMedia(String id, String newPath) async {
+    try {
+      final media = _availableMedia.firstWhere((m) => m.id == id);
+      final stat = await File(newPath).stat();
+      media
+        ..path = newPath
+        ..sizeBytes = stat.size
+        ..modifiedMs = stat.modified.millisecondsSinceEpoch;
+      await _dataSource.saveMedia(media);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  /// 托管目录的占用统计
+  Future<({int files, int bytes})> managedStorageUsage() async {
+    final paths = await MediaUtils.managedFilePaths();
+    var bytes = 0;
+    for (final p in paths) {
+      try {
+        bytes += await File(p).length();
+      } catch (_) {
+        // 文件在枚举后被外部删除，忽略即可
+      }
+    }
+    return (files: paths.length, bytes: bytes);
+  }
+
+  /// 清理不再被任何片段引用的素材记录，并回收其托管文件，返回释放量
+  Future<({int files, int bytes})> cleanupUnusedMedia() async {
+    try {
+      final allClips = await _dataSource.getAllClips();
+      final referencedIds = allClips.map((c) => c.mediaId).toSet();
+      final allMedia = await _dataSource.getAllMedia();
+
+      for (final media in allMedia) {
+        if (!referencedIds.contains(media.id)) {
+          await _dataSource.deleteMedia(media.id);
+          _availableMedia.removeWhere((m) => m.id == media.id);
+        }
+      }
+
+      final freed = await _removeUnreferencedManagedFiles();
+      notifyListeners();
+      return freed;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return (files: 0, bytes: 0);
+    }
+  }
+
+  /// 删除托管目录中已无任何素材记录指向的文件
+  Future<({int files, int bytes})> _removeUnreferencedManagedFiles() async {
+    final referenced = (await _dataSource.getAllMedia())
+        .map((m) => MediaUtils.canonicalPath(m.path))
+        .toSet();
+
+    var files = 0;
+    var bytes = 0;
+    for (final p in await MediaUtils.managedFilePaths()) {
+      if (referenced.contains(MediaUtils.canonicalPath(p))) continue;
+      bytes += await MediaUtils.deleteFile(p);
+      files++;
+    }
+    logDebug('回收托管文件 $files 个，共 $bytes 字节');
+    return (files: files, bytes: bytes);
   }
 
   // ==================== 时间线片段管理 ====================
@@ -401,7 +511,7 @@ class VideoProvider extends ChangeNotifier {
         );
         return TimelineSegment(
           id: clipIndex,
-          name: media.path.split('/').last,
+          name: media.name ?? p.basename(media.path),
           startTime: clip.positionMs / 1000.0,
           duration: clip.durationMs / 1000.0,
           type: trackType,
